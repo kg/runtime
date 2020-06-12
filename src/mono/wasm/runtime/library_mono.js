@@ -49,7 +49,7 @@ var MonoSupportLib = {
 
 				var str = "";
 				if (MONO.mono_text_decoder) {
-					// When threading is enabled, TextDecoder does not accept a view of a 
+					// When threading is enabled, TextDecoder does not accept a view of a
 					// SharedArrayBuffer, we must make a copy of the array first.
 					var subArray = typeof SharedArrayBuffer !== 'undefined' && Module.HEAPU8.buffer instanceof SharedArrayBuffer
 						? Module.HEAPU8.slice(start, end)
@@ -481,7 +481,7 @@ var MonoSupportLib = {
 		},
 
 		// Set environment variable NAME to VALUE
-		// Should be called before mono_load_runtime_and_bcl () in most cases 
+		// Should be called before mono_load_runtime_and_bcl () in most cases
 		mono_wasm_setenv: function (name, value) {
 			if (!this.wasm_setenv)
 				this.wasm_setenv = Module.cwrap ('mono_wasm_setenv', null, ['string', 'string']);
@@ -542,6 +542,11 @@ var MonoSupportLib = {
 			var loaded_files = [];
 			var mono_wasm_add_assembly = Module.cwrap ('mono_wasm_add_assembly', null, ['string', 'number', 'number']);
 
+            console.log ("Requesting ICU version");
+            var getICUVersion = Module.cwrap ('GlobalizationNative_GetICUVersion', "number", []);
+            var icuVersionId = getICUVersion ();
+            console.log ("ICU version: " + icuVersionId);
+
 			if (!fetch_file_cb) {
 				if (ENVIRONMENT_IS_NODE) {
 					var fs = require('fs');
@@ -572,8 +577,35 @@ var MonoSupportLib = {
 				}
 			}
 
+            var onPendingRequestComplete = function () {
+                --pending;
+                if (pending == 0) {
+                    MONO.loaded_files = loaded_files;
+                    var load_runtime = Module.cwrap ('mono_wasm_load_runtime', null, ['string', 'number']);
+
+                    console.log ("MONO_WASM: Initializing mono runtime");
+                    if (ENVIRONMENT_IS_SHELL || ENVIRONMENT_IS_NODE) {
+                        try {
+                            load_runtime (vfs_prefix, enable_debugging);
+                        } catch (ex) {
+                            print ("MONO_WASM: load_runtime () failed: " + ex);
+                            var err = new Error();
+                            print ("MONO_WASM: Stacktrace: \n");
+                            print (err.stack);
+
+                            var wasm_exit = Module.cwrap ('mono_wasm_exit', null, ['number']);
+                            wasm_exit (1);
+                        }
+                    } else {
+                        load_runtime (vfs_prefix, enable_debugging);
+                    }
+                    MONO.mono_wasm_runtime_ready ();
+                    loaded_cb ();
+                }
+            };
+
 			file_list.forEach (function(file_name) {
-				
+
 				var fetch_promise = fetch_file_cb (locateFile(deploy_prefix + "/" + file_name));
 
 				fetch_promise.then (function (response) {
@@ -600,30 +632,7 @@ var MonoSupportLib = {
 					mono_wasm_add_assembly (file_name, memory, asm.length);
 
 					//console.log ("MONO_WASM: Loaded: " + file_name);
-					--pending;
-					if (pending == 0) {
-						MONO.loaded_files = loaded_files;
-						var load_runtime = Module.cwrap ('mono_wasm_load_runtime', null, ['string', 'number']);
-
-						console.log ("MONO_WASM: Initializing mono runtime");
-						if (ENVIRONMENT_IS_SHELL || ENVIRONMENT_IS_NODE) {
-							try {
-								load_runtime (vfs_prefix, enable_debugging);
-							} catch (ex) {
-								print ("MONO_WASM: load_runtime () failed: " + ex);
-								var err = new Error();
-								print ("MONO_WASM: Stacktrace: \n");
-								print (err.stack);
-
-								var wasm_exit = Module.cwrap ('mono_wasm_exit', null, ['number']);
-								wasm_exit (1);
-							}
-						} else {
-							load_runtime (vfs_prefix, enable_debugging);
-						}
-						MONO.mono_wasm_runtime_ready ();
-						loaded_cb ();
-					}
+                    onPendingRequestComplete ();
 				});
 			});
 		},
@@ -632,14 +641,14 @@ var MonoSupportLib = {
 			console.log(">>>mono_wasm_get_loaded_files");
 			return this.loaded_files;
 		},
-		
+
 		mono_wasm_clear_all_breakpoints: function() {
 			if (!this.mono_clear_bps)
 				this.mono_clear_bps = Module.cwrap ('mono_wasm_clear_all_breakpoints', null);
 
 			this.mono_clear_bps ();
 		},
-		
+
 		mono_wasm_add_null_var: function(className)
 		{
 			fixed_class_name = MONO._mono_csharp_fixup_class_name(Module.UTF8ToString (className));
