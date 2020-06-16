@@ -148,19 +148,20 @@ public class WasmAppBuilder : Task
                 sw.WriteLine("\t},");
             }
             sw.WriteLine ("\t],");
+
             if (AssetSources!.Length > 0) {
                 sw.WriteLine("\truntime_asset_sources: [");
                 foreach (var source in AssetSources!)
-                    sw.Write("\"" + source.ItemSpec + "\", ");
+                    sw.Write("\t\t\"" + source.ItemSpec + "\", ");
                 sw.WriteLine ("],");
             }
             if (Assets!.Length > 0) {
                 sw.WriteLine("\truntime_assets: [");
                 foreach (var asset in Assets!)
-                    sw.Write("\"" + asset.ItemSpec + "\", ");
+                    sw.Write("\t\t\"" + asset.ItemSpec + "\", ");
                 sw.WriteLine ("],");
             }
-            sw.WriteLine ("}");
+            sw.WriteLine ("};");
         }
 
         using (var sw = File.CreateText(Path.Join(AppDir, "run-v8.sh")))
