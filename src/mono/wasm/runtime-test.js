@@ -215,14 +215,23 @@ var Module = {
             // Here we wrap the file read in a promise and fake a fetch response
             // structure.
             return new Promise ((resolve, reject) => {
-                 var response = { ok: true, url: asset,
-                        arrayBuffer: function () {
-                            return new Promise ((resolve2, reject2) => {
-                                resolve2 (new Uint8Array (read (asset, 'binary')));
-                        }
-                    )}
+                var bytes = null, error = null;
+                try {
+                    bytes = read (asset, 'binary');
+                } catch (exc) {
+                    error = exc;
                 }
-               resolve (response)
+                var response = { ok: (bytes && !error), url: asset,
+                    arrayBuffer: function () {
+                        return new Promise ((resolve2, reject2) => {
+                            if (error)
+                                reject2 (error);
+                            else
+                                resolve2 (new Uint8Array (bytes));
+                    }
+                )}
+                }
+               resolve (response);
              })
           }
         };

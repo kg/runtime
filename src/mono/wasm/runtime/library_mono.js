@@ -696,6 +696,7 @@ var MonoSupportLib = {
 
                 attemptNextSource = function (file_name) {
                     if (sourceIndex >= runtime_asset_sources.length) {
+                        console.log ("Failed to load " + file_name);
                         --pending;
                         throw new Error ("MONO-WASM: Failed to load asset: '" + file_name + "' after attempting all sources");
                     }
