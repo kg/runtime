@@ -92,24 +92,21 @@ public class WasmAppBuilder : Task
             sw.WriteLine("\tenable_debugging: 0,");
             sw.WriteLine("\tfile_list: [");
             foreach (var assembly in _assemblies.Values)
-            {
-                sw.Write("\"" + Path.GetFileName(assembly.Location) + "\"");
-                sw.Write(", ");
-            }
+                sw.Write("\t\t\"" + Path.GetFileName(assembly.Location) + "\", ");
             sw.WriteLine ("],");
             if (AssetSources!.Length > 0) {
                 sw.WriteLine("\truntime_asset_sources: [");
                 foreach (var source in AssetSources!)
-                    sw.Write("\"" + source.ItemSpec + "\", ");
+                    sw.Write("\t\t\"" + source.ItemSpec + "\", ");
                 sw.WriteLine ("],");
             }
             if (Assets!.Length > 0) {
                 sw.WriteLine("\truntime_assets: [");
                 foreach (var asset in Assets!)
-                    sw.Write("\"" + asset.ItemSpec + "\", ");
+                    sw.Write("\t\t\"" + asset.ItemSpec + "\", ");
                 sw.WriteLine ("],");
             }
-            sw.WriteLine ("}");
+            sw.WriteLine ("};");
         }
 
         using (var sw = File.CreateText(Path.Join(AppDir, "run-v8.sh")))

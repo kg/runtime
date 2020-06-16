@@ -565,9 +565,9 @@ var MonoSupportLib = {
         //      If no default implementation is available this call will fail.
         //    runtime_assets: (optional) a list of asset filenames to load along with the runtime.
         //    runtime_asset_sources: (optional) additional search locations for runtime assets.
-        //      if no runtime asset sources are provided the default will be [""].
+        //      if no runtime asset sources are provided the default will be ["./"].
         //      sources will be checked in sequential order until the asset is found.
-        //      the empty string "" indicates to load from the application directory (as with the
+        //      the string "./" indicates to load from the application directory (as with the
         //      files in file_list), and a fully-qualified URL like "https://example.com/" indicates
         //      that asset loads can be attempted from a remote server. Sources must end with a /.
         //    environment_variables: (optional) dictionary-style Object containing environment variables
@@ -584,7 +584,12 @@ var MonoSupportLib = {
             var fetch_file_cb = args.fetch_file_cb;
             var runtime_assets = (args.runtime_assets || []);
 
-            console.log("loading runtime with config " + JSON.stringify(args));
+            if (!file_list)
+                throw new Error ("file_list not provided");
+            if (!loaded_cb)
+                throw new Error ("loaded_cb not provided");
+
+            console.log ("loading runtime with config " + JSON.stringify(args));
 
             var pending = file_list.length + runtime_assets.length;
             var loaded_files = [];
@@ -698,12 +703,18 @@ var MonoSupportLib = {
                     var sourcePrefix = runtime_asset_sources[sourceIndex];
                     sourceIndex++;
 
+                    // HACK: Special-case because MSBuild doesn't allow "" as an attribute
+                    if (sourcePrefix === "./")
+                        sourcePrefix = "";
+
                     var attemptUrl = sourcePrefix + file_name;
                     console.log ("Attempting " + attemptUrl);
 
                     var fetch_promise = fetch_file_cb (attemptUrl);
                     fetch_promise.then (handleFetchResponse.bind (this, file_name));
                 };
+
+                attemptNextSource (file_name);
             });
 
             file_list.forEach (function (file_name) {

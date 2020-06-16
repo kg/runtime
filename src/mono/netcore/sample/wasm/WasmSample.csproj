@@ -35,9 +35,8 @@
       <AssemblySearchPaths Include="$(MicrosoftNetCoreAppRuntimePackDir)lib\$(NetCoreAppCurrent)"/>
     </ItemGroup>
     <ItemGroup>
-      <AssetSources Include=""/>
-      <AssetSources Include="http://localhost/wasm-assets/"/>
-      <AssetSources Include="https://viramate.luminance.org/wasm-assets/"/>
+      <AssetSources Include="./" />
+      <AssetSources Include="http://localhost/wasm-assets/" />
     </ItemGroup>
     <ItemGroup>
       <Assets Include="icudt.dat" />
