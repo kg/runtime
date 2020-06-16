@@ -30,6 +30,8 @@ public class WasmAppBuilder : Task
     public ITaskItem[]? AssemblySearchPaths { get; set; }
     public ITaskItem[]? ExtraAssemblies { get; set; }
     public ITaskItem[]? ExtraFiles { get; set; }
+    public ITaskItem[]? AssetSources { get; set; }
+    public ITaskItem[]? Assets { get; set; }
 
     Dictionary<string, Assembly>? _assemblies;
     Resolver? _resolver;
@@ -95,6 +97,18 @@ public class WasmAppBuilder : Task
                 sw.Write(", ");
             }
             sw.WriteLine ("],");
+            if (AssetSources!.Length > 0) {
+                sw.WriteLine("\truntime_asset_sources: [");
+                foreach (var source in AssetSources!)
+                    sw.Write("\"" + source.ItemSpec + "\", ");
+                sw.WriteLine ("],");
+            }
+            if (Assets!.Length > 0) {
+                sw.WriteLine("\truntime_assets: [");
+                foreach (var asset in Assets!)
+                    sw.Write("\"" + asset.ItemSpec + "\", ");
+                sw.WriteLine ("],");
+            }
             sw.WriteLine ("}");
         }
 

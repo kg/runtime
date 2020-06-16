@@ -552,7 +552,7 @@ var MonoSupportLib = {
         },
 
         // Initializes the runtime and loads assemblies, debug information, and other files.
-        // args is a dictionary-style Object with the following properties:
+        // @args is a dictionary-style Object with the following properties:
         //    vfs_prefix: (required)
         //    deploy_prefix: (required)
         //    enable_debugging: (required)
@@ -570,6 +570,12 @@ var MonoSupportLib = {
         //      the empty string "" indicates to load from the application directory (as with the
         //      files in file_list), and a fully-qualified URL like "https://example.com/" indicates
         //      that asset loads can be attempted from a remote server. Sources must end with a /.
+        //    environment_variables: (optional) dictionary-style Object containing environment variables
+        //    runtime_options: (optional) array of runtime options as strings
+        //    aot_profiler_options: (optional) dictionary-style Object. see the comments for
+        //      mono_wasm_init_aot_profiler. If omitted, aot profiler will not be initialized.
+        //    coverage_profiler_options: (optional) dictionary-style Object. see the comments for
+        //      mono_wasm_init_coverage_profiler. If omitted, coverage profiler will not be initialized.
 
         mono_load_runtime_and_bcl_args: function (args) {
             var deploy_prefix = args.deploy_prefix;
@@ -578,11 +584,23 @@ var MonoSupportLib = {
             var fetch_file_cb = args.fetch_file_cb;
             var runtime_assets = (args.runtime_assets || []);
 
-            console.log("loading runtime with config", args);
+            console.log("loading runtime with config " + JSON.stringify(args));
 
             var pending = file_list.length + runtime_assets.length;
             var loaded_files = [];
             var mono_wasm_add_assembly = Module.cwrap ('mono_wasm_add_assembly', null, ['string', 'number', 'number']);
+
+            for (var k in (args.environment_variables || {}))
+                this.mono_wasm_setenv (k, args.environment_variables[k]);
+
+            if (args.runtime_options)
+                this.mono_wasm_set_runtime_options (args.runtime_options);
+
+            if (args.aot_profiler_options)
+                this.mono_wasm_init_aot_profiler (args.aot_profiler_options);
+
+            if (args.coverage_profiler_options)
+                this.mono_wasm_init_coverage_profiler (args.coverage_profiler_options);
 
             if (!fetch_file_cb) {
                 if (ENVIRONMENT_IS_NODE) {
