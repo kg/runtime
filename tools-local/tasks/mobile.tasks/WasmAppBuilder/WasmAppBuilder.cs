@@ -152,13 +152,13 @@ public class WasmAppBuilder : Task
             if (AssetSources!.Length > 0) {
                 sw.WriteLine("\truntime_asset_sources: [");
                 foreach (var source in AssetSources!)
-                    sw.Write("\t\t\"" + source.ItemSpec + "\", ");
+                    sw.WriteLine("\t\t\"" + source.ItemSpec + "\", ");
                 sw.WriteLine ("],");
             }
             if (Assets!.Length > 0) {
                 sw.WriteLine("\truntime_assets: [");
                 foreach (var asset in Assets!)
-                    sw.Write("\t\t\"" + asset.ItemSpec + "\", ");
+                    sw.WriteLine("\t\t\"" + asset.ItemSpec + "\", ");
                 sw.WriteLine ("],");
             }
             sw.WriteLine ("};");
