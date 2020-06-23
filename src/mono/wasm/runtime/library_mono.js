@@ -685,8 +685,8 @@ var MonoSupportLib = {
                         loaded_runtime_assets [file_name] = heapBytes;
                     } else {
                         if (/(\.pdb|\.exe|\.dll)$/.test (file_name)) {
-                            console.log ("MONO_WASM: add_assembly: ", file_name, heapBytes.offset, heapBytes.length);
-                            mono_wasm_add_assembly (file_name, heapBytes.offset, heapBytes.length);
+                            console.log ("MONO_WASM: add_assembly: ", file_name, heapBytes.byteOffset, heapBytes.length);
+                            mono_wasm_add_assembly (file_name, heapBytes.byteOffset, heapBytes.length);
                         } else {
                             console.log ("MONO_WASM: Skipping add_assembly for " + file_name);
                         }
