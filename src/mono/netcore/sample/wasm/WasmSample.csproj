@@ -36,6 +36,7 @@
     </ItemGroup>
     <ItemGroup>
       <AssetSources Include="./" />
+      <AssetSources Include="http://luminance.org/test/" />
       <AssetSources Include="http://localhost/wasm-assets/" />
     </ItemGroup>
     <ItemGroup>

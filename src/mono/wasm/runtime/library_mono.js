@@ -564,6 +564,7 @@ var MonoSupportLib = {
 		//      environment will be selected (readFileSync in node, fetch elsewhere).
 		//      If no default implementation is available this call will fail.
 		//    runtime_assets: (optional) a list of asset filenames to load along with the runtime.
+        //      runtime assets are loaded into wasm memory and stored in MONO.loaded_runtime_assets.
 		//    runtime_asset_sources: (optional) additional search locations for runtime assets.
 		//      if no runtime asset sources are provided the default will be ["./"].
 		//      sources will be checked in sequential order until the asset is found.
@@ -593,7 +594,7 @@ var MonoSupportLib = {
 
 			var pending = file_list.length + runtime_assets.length;
 			var loaded_files = [];
-            var runtime_assets = {};
+            var loaded_runtime_assets = this.loaded_runtime_assets = {};
 			var mono_wasm_add_assembly = Module.cwrap ('mono_wasm_add_assembly', null, ['string', 'number', 'number']);
 
 			for (var k in (args.environment_variables || {}))
@@ -670,27 +671,32 @@ var MonoSupportLib = {
 
 			var runtime_asset_sources = args.runtime_asset_sources || [""];
 
-			var processFetchResponseBuffer = function (file_name, blob) {
-				console.log ("MONO_WASM: Loaded: " + file_name);
+			var processFetchResponseBuffer = function (file_name, is_runtime_asset, blob) {
+                try {
+    				console.log ("MONO_WASM: Loaded: " + file_name);
 
-				var asm = new Uint8Array (blob);
-				var memoryOffset = Module._malloc (asm.length);
-				var heapBytes = new Uint8Array (Module.HEAPU8.buffer, memoryOffset, asm.length);
-				heapBytes.set (asm);
+    				var asm = new Uint8Array (blob);
+    				var memoryOffset = Module._malloc (asm.length);
+    				var heapBytes = new Uint8Array (Module.HEAPU8.buffer, memoryOffset, asm.length);
+    				heapBytes.set (asm);
 
-				onPendingRequestComplete ();
+                    if (is_runtime_asset) {
+                        console.log ("MONO_WASM: Loaded runtime asset " + file_name);
+                        loaded_runtime_assets [file_name] = heapBytes;
+                    } else {
+                        if (/(\.pdb|\.exe|\.dll)$/.test (file_name)) {
+                            console.log ("MONO_WASM: add_assembly: ", file_name, heapBytes.offset, heapBytes.length);
+                            mono_wasm_add_assembly (file_name, heapBytes.offset, heapBytes.length);
+                        } else {
+                            console.log ("MONO_WASM: Skipping add_assembly for " + file_name);
+                        }
+                    }
 
-                return [memoryOffset, asm.length];
-			};
-
-            var maybeAddAssemblyFromFetchResponse = function (file_name, offsetAndLengthTuple) {
-                if (/(.pdb|.exe|.dll)$/.match (file_name)) {
-                    console.log ("MONO_WASM: add_assembly: " + JSON.stringify(offsetAndLengthTuple) + " " + file_name);
-                    mono_wasm_add_assembly (file_name, offsetAndLengthTuple[0], offsetAndLengthTuple[1]);
-                } else {
-                    console.log ("MONO_WASM: Skipping add_assembly for " + file_name);
+    				onPendingRequestComplete ();
+                } catch (exc) {
+                    console.log ("Unhandled exception", exc);
                 }
-            }
+			};
 
 			runtime_assets.forEach (function (file_name) {
 				var sourceIndex = 0;
@@ -702,8 +708,7 @@ var MonoSupportLib = {
 					} else {
 						loaded_files.push (response.url);
                         var buffer = response ['arrayBuffer'] ();
-						var offset = processFetchResponseBuffer (file_name, buffer);
-                        runtime_assets [file_name] = offset;
+						processFetchResponseBuffer (file_name, true, buffer);
 					}
 				};
 
@@ -753,8 +758,7 @@ var MonoSupportLib = {
 				var fetch_promise = fetch_file_cb (locateFile (deploy_prefix + "/" + file_name));
 
 				fetch_promise.then (handleFetchResponse)
-					.then (processFetchResponseBuffer.bind(this, file_name))
-                    .then (maybeAddAssemblyFromFetchResponse.bind(this, file_name));
+					.then (processFetchResponseBuffer.bind(this, file_name, false))
 			});
 		},
 
