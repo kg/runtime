@@ -12,6 +12,23 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+
+EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
+    UErrorCode status;
+    udata_setCommonData (pData, &status);
+
+    if (U_FAILURE(status)) {
+        EM_ASM({
+            console.debug("udata_setCommonData failed with error", $0);
+        }, status);
+        return 0;
+    } else {
+        EM_ASM({
+            console.debug("udata_setCommonData ok");
+        });
+        return 1;
+    }
+}
 #endif
 
 int32_t GlobalizationNative_LoadICU(void)
@@ -40,11 +57,8 @@ int32_t GlobalizationNative_LoadICU(void)
 
     if (U_FAILURE(status)) {
         EM_ASM({
-            console.debug("u_init failed");
-        });
-        EM_ASM({
-            console.debug("u_init failed with error", status);
-        });
+            console.debug("u_init failed with error", $0);
+        }, status);
         return 0;
     } else {
         EM_ASM(
