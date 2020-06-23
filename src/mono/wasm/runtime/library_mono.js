@@ -769,7 +769,7 @@ var MonoSupportLib = {
         _process_runtime_assets: function(dict) {
             var icudt = dict ["icudt.dat"];
             if (icudt) {
-                console.log ("invoking mono_wasm_load_icu_data");
+                console.log ("invoking mono_wasm_load_icu_data", icudt.byteOffset);
                 var mono_wasm_load_icu_data = Module.cwrap ('mono_wasm_load_icu_data', 'number', ['number']);
                 var result = mono_wasm_load_icu_data (icudt.byteOffset);
                 console.log ("mono_wasm_load_icu_data returned", result);
