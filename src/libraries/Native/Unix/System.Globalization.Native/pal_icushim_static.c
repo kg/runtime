@@ -16,7 +16,7 @@
 EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData);
 
 EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
-    UErrorCode status;
+    UErrorCode status = 0;
     udata_setCommonData (pData, &status);
 
     if (U_FAILURE(status)) {
@@ -54,7 +54,7 @@ int32_t GlobalizationNative_LoadICU(void)
 
     // we can also use `udata_setCommonData(const void *data, UErrorCode *err)` API here
 
-    UErrorCode status;
+    UErrorCode status = 0;
     u_init(&status);
 
     if (U_FAILURE(status)) {
