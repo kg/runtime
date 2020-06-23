@@ -594,7 +594,7 @@ var MonoSupportLib = {
 
 			var pending = file_list.length + runtime_assets.length;
 			var loaded_files = [];
-            var loaded_runtime_assets = this.loaded_runtime_assets = {};
+            var loaded_runtime_assets = {};
 			var mono_wasm_add_assembly = Module.cwrap ('mono_wasm_add_assembly', null, ['string', 'number', 'number']);
 
 			for (var k in (args.environment_variables || {}))
@@ -646,6 +646,10 @@ var MonoSupportLib = {
 
 				if (pending == 0) {
 					MONO.loaded_files = loaded_files;
+                    MONO.loaded_runtime_assets = loaded_runtime_assets;
+
+                    MONO._process_runtime_assets (loaded_runtime_assets);
+
 					var load_runtime = Module.cwrap ('mono_wasm_load_runtime', null, ['string', 'number']);
 
 					console.log ("MONO_WASM: Initializing mono runtime");
@@ -761,6 +765,18 @@ var MonoSupportLib = {
 					.then (processFetchResponseBuffer.bind(this, file_name, false))
 			});
 		},
+
+        _process_runtime_assets: function(dict) {
+            var icudt = dict ["icudt.dat"];
+            if (icudt) {
+                console.log ("invoking mono_wasm_load_icu_data");
+                var mono_wasm_load_icu_data = Module.cwrap ('mono_wasm_load_icu_data', 'number', ['number']);
+                var result = mono_wasm_load_icu_data (icudt.byteOffset);
+                console.log ("mono_wasm_load_icu_data returned", result);
+            } else {
+                console.log ("no icudt.dat found");
+            }
+        },
 
 		mono_wasm_get_loaded_files: function() {
 			console.log(">>>mono_wasm_get_loaded_files");
