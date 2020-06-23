@@ -593,6 +593,7 @@ var MonoSupportLib = {
 
 			var pending = file_list.length + runtime_assets.length;
 			var loaded_files = [];
+            var runtime_assets = {};
 			var mono_wasm_add_assembly = Module.cwrap ('mono_wasm_add_assembly', null, ['string', 'number', 'number']);
 
 			for (var k in (args.environment_variables || {}))
@@ -673,13 +674,23 @@ var MonoSupportLib = {
 				console.log ("MONO_WASM: Loaded: " + file_name);
 
 				var asm = new Uint8Array (blob);
-				var memory = Module._malloc (asm.length);
-				var heapBytes = new Uint8Array (Module.HEAPU8.buffer, memory, asm.length);
+				var memoryOffset = Module._malloc (asm.length);
+				var heapBytes = new Uint8Array (Module.HEAPU8.buffer, memoryOffset, asm.length);
 				heapBytes.set (asm);
-				mono_wasm_add_assembly (file_name, memory, asm.length);
 
 				onPendingRequestComplete ();
+
+                return [memoryOffset, asm.length];
 			};
+
+            var maybeAddAssemblyFromFetchResponse = function (file_name, offsetAndLengthTuple) {
+                if (/(.pdb|.exe|.dll)$/.match (file_name)) {
+                    console.log ("MONO_WASM: add_assembly: " + JSON.stringify(offsetAndLengthTuple) + " " + file_name);
+                    mono_wasm_add_assembly (file_name, offsetAndLengthTuple[0], offsetAndLengthTuple[1]);
+                } else {
+                    console.log ("MONO_WASM: Skipping add_assembly for " + file_name);
+                }
+            }
 
 			runtime_assets.forEach (function (file_name) {
 				var sourceIndex = 0;
@@ -690,7 +701,9 @@ var MonoSupportLib = {
 						attemptNextSource (file_name);
 					} else {
 						loaded_files.push (response.url);
-						processFetchResponseBuffer (file_name, response ['arrayBuffer'] ());
+                        var buffer = response ['arrayBuffer'] ();
+						var offset = processFetchResponseBuffer (file_name, buffer);
+                        runtime_assets [file_name] = offset;
 					}
 				};
 
@@ -740,7 +753,8 @@ var MonoSupportLib = {
 				var fetch_promise = fetch_file_cb (locateFile (deploy_prefix + "/" + file_name));
 
 				fetch_promise.then (handleFetchResponse)
-					.then (processFetchResponseBuffer.bind(this, file_name));
+					.then (processFetchResponseBuffer.bind(this, file_name))
+                    .then (maybeAddAssemblyFromFetchResponse.bind(this, file_name));
 			});
 		},
 
