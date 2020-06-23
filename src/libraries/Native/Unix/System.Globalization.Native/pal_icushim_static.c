@@ -13,6 +13,14 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
+static void log_icu_error (const char * name, UErrorCode status) {
+    const char * statusText = u_errorName(status);
+
+    EM_ASM({
+        console.debug("ICU call", UTF8ToString($2), "failed with error", $0, UTF8ToString($1));
+    }, status, statusText, name);
+}
+
 EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData);
 
 EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
@@ -20,9 +28,7 @@ EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
     udata_setCommonData (pData, &status);
 
     if (U_FAILURE(status)) {
-        EM_ASM({
-            console.debug("udata_setCommonData", $0, "failed with error", $1);
-        }, pData, status);
+        log_icu_error("udata_setCommonData", status);
         return 0;
     } else {
         EM_ASM({
@@ -35,32 +41,18 @@ EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
 
 int32_t GlobalizationNative_LoadICU(void)
 {
-    EM_ASM(
-        console.debug("static LoadICU");
-    );
-
     const char* icudir = getenv("DOTNET_ICU_DIR");
-    if (icudir) {
-        EM_ASM(
-            console.debug("static LoadICU setting data directory");
-        );
+    if (icudir)
         u_setDataDirectory(icudir);
-    } else {
-        EM_ASM(
-            console.debug("static LoadICU not setting data directory");
-        );
+    else
+        ;
         // default ICU search path behavior will be used, see http://userguide.icu-project.org/icudata
-    }
-
-    // we can also use `udata_setCommonData(const void *data, UErrorCode *err)` API here
 
     UErrorCode status = 0;
     u_init(&status);
 
     if (U_FAILURE(status)) {
-        EM_ASM({
-            console.debug("u_init failed with error", $0);
-        }, status);
+        log_icu_error("u_init", status);
         return 0;
     } else {
         EM_ASM(
