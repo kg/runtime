@@ -13,6 +13,8 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
+EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData);
+
 EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
     UErrorCode status;
     udata_setCommonData (pData, &status);

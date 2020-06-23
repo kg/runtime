@@ -26,6 +26,7 @@
 #include <unicode/uchar.h>
 #include <unicode/ucol.h>
 #include <unicode/udat.h>
+#include <unicode/udata.h>
 #include <unicode/udatpg.h>
 #include <unicode/uenum.h>
 #include <unicode/uidna.h>
@@ -67,6 +68,7 @@
     PER_FUNCTION_BLOCK(u_strncpy, libicuuc) \
     PER_FUNCTION_BLOCK(u_tolower, libicuuc) \
     PER_FUNCTION_BLOCK(u_toupper, libicuuc) \
+    PER_FUNCTION_BLOCK(udata_setCommonData, libicuuc) \
     PER_FUNCTION_BLOCK(ucal_add, libicui18n) \
     PER_FUNCTION_BLOCK(ucal_close, libicui18n) \
     PER_FUNCTION_BLOCK(ucal_get, libicui18n) \
@@ -194,6 +196,7 @@ FOR_ALL_ICU_FUNCTIONS
 #define u_strncpy(...) u_strncpy_ptr(__VA_ARGS__)
 #define u_tolower(...) u_tolower_ptr(__VA_ARGS__)
 #define u_toupper(...) u_toupper_ptr(__VA_ARGS__)
+#define udata_setCommonData(...) udata_setCommonData_ptr(__VA_ARGS__)
 #define ucal_add(...) ucal_add_ptr(__VA_ARGS__)
 #define ucal_close(...) ucal_close_ptr(__VA_ARGS__)
 #define ucal_get(...) ucal_get_ptr(__VA_ARGS__)
