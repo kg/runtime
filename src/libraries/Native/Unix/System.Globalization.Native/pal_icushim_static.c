@@ -21,13 +21,13 @@ EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
 
     if (U_FAILURE(status)) {
         EM_ASM({
-            console.debug("udata_setCommonData failed with error", $0);
-        }, status);
+            console.debug("udata_setCommonData", $0, "failed with error", $1);
+        }, pData, status);
         return 0;
     } else {
         EM_ASM({
-            console.debug("udata_setCommonData ok");
-        });
+            console.debug("udata_setCommonData", $0, "ok");
+        }, pData);
         return 1;
     }
 }
