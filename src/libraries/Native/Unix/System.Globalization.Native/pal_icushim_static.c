@@ -10,16 +10,13 @@
 #include <unicode/putil.h>
 #include <unicode/uversion.h>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-
 static void log_icu_error (const char * name, UErrorCode status) {
     const char * statusText = u_errorName(status);
-
-    EM_ASM({
-        console.debug("ICU call", UTF8ToString($2), "failed with error", $0, UTF8ToString($1));
-    }, status, statusText, name);
+    fprintf(stderr, "ICU call %s failed with error #%d '%s'.\n", name, status, statusText);
 }
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
 
 EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData);
 
@@ -31,9 +28,6 @@ EMSCRIPTEN_KEEPALIVE int32_t mono_wasm_load_icu_data (void * pData) {
         log_icu_error("udata_setCommonData", status);
         return 0;
     } else {
-        EM_ASM({
-            console.debug("udata_setCommonData", $0, "ok");
-        }, pData);
         return 1;
     }
 }
@@ -45,19 +39,16 @@ int32_t GlobalizationNative_LoadICU(void)
     if (icudir)
         u_setDataDirectory(icudir);
     else
-        ;
-        // default ICU search path behavior will be used, see http://userguide.icu-project.org/icudata
+        ; // default ICU search path behavior will be used, see http://userguide.icu-project.org/icudata
 
     UErrorCode status = 0;
+    // Invoking u_init will probe to see if ICU common data is already available, and if it is missing,
+    //  attempt to load it from the local filesystem.
     u_init(&status);
 
     if (U_FAILURE(status)) {
         log_icu_error("u_init", status);
         return 0;
-    } else {
-        EM_ASM(
-            console.debug("u_init ok");
-        );
     }
 
     return 1;
