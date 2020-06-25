@@ -564,7 +564,8 @@ var MonoSupportLib = {
 		//      environment will be selected (readFileSync in node, fetch elsewhere).
 		//      If no default implementation is available this call will fail.
 		//    runtime_assets: (optional) a list of asset filenames to load along with the runtime.
-		//      runtime assets are loaded into wasm memory and stored in MONO.loaded_runtime_assets.
+		//      runtime assets are loaded into wasm memory and MONO.loaded_runtime_assets is populated
+		//      with [offset, length] tuples for each asset
 		//    runtime_asset_sources: (optional) additional search locations for runtime assets.
 		//      if no runtime asset sources are provided the default will be ["./"].
 		//      sources will be checked in sequential order until the asset is found.
@@ -589,8 +590,6 @@ var MonoSupportLib = {
 				throw new Error ("file_list not provided");
 			if (!loaded_cb)
 				throw new Error ("loaded_cb not provided");
-
-			console.log ("loading runtime with config " + JSON.stringify(args));
 
 			var pending = file_list.length + runtime_assets.length;
 			var loaded_files = [];
@@ -677,22 +676,20 @@ var MonoSupportLib = {
 
 			var processFetchResponseBuffer = function (file_name, is_runtime_asset, blob) {
 				try {
-					console.log ("MONO_WASM: Loaded: " + file_name);
-
 					var asm = new Uint8Array (blob);
+					console.log ("MONO_WASM: Loaded:", file_name, asm.length);
+
 					var memoryOffset = Module._malloc (asm.length);
 					var heapBytes = new Uint8Array (Module.HEAPU8.buffer, memoryOffset, asm.length);
 					heapBytes.set (asm);
 
 					if (is_runtime_asset) {
-						console.log ("MONO_WASM: Loaded runtime asset " + file_name);
-						loaded_runtime_assets [file_name] = heapBytes;
+						loaded_runtime_assets [file_name] = [memoryOffset, asm.length];
 					} else {
 						if (/(\.pdb|\.exe|\.dll)$/.test (file_name)) {
-							console.log ("MONO_WASM: add_assembly: ", file_name, heapBytes.byteOffset, heapBytes.length);
-							mono_wasm_add_assembly (file_name, heapBytes.byteOffset, heapBytes.length);
+							mono_wasm_add_assembly (file_name, memoryOffset, asm.length);
 						} else {
-							console.log ("MONO_WASM: Skipping add_assembly for " + file_name);
+							console.log ("MONO_WASM: Skipping add_assembly for", file_name);
 						}
 					}
 
@@ -711,14 +708,16 @@ var MonoSupportLib = {
 						attemptNextSource (file_name);
 					} else {
 						loaded_files.push (response.url);
-						var buffer = response ['arrayBuffer'] ();
-						processFetchResponseBuffer (file_name, true, buffer);
+						var bufferPromise = response ['arrayBuffer'] ();
+						bufferPromise.then (
+							processFetchResponseBuffer.bind (this, file_name, true)
+						);
 					}
 				};
 
 				attemptNextSource = function (file_name) {
 					if (sourceIndex >= runtime_asset_sources.length) {
-						console.log ("Failed to load " + file_name);
+						console.log ("MONO_WASM: Failed to load " + file_name);
 						--pending;
 						throw new Error ("MONO-WASM: Failed to load asset: '" + file_name + "' after attempting all sources");
 					}
@@ -731,7 +730,7 @@ var MonoSupportLib = {
 						sourcePrefix = "";
 
 					var attemptUrl = sourcePrefix + file_name;
-					console.log ("Attempting " + attemptUrl);
+					console.log ("MONO_WASM: Attempting load of", file_name, "from", attemptUrl);
 
 					var fetch_promise = fetch_file_cb (attemptUrl);
 					fetch_promise.then (handleFetchResponse.bind (this, file_name));
@@ -769,12 +768,13 @@ var MonoSupportLib = {
 		_process_runtime_assets: function(dict) {
 			var icudt = dict ["icudt.dat"];
 			if (icudt) {
-				console.log ("invoking mono_wasm_load_icu_data", icudt.byteOffset);
+				console.log ("MONO_WASM: icudt", icudt);
+				console.log ("MONO_WASM: invoking mono_wasm_load_icu_data", icudt[0]);
 				var mono_wasm_load_icu_data = Module.cwrap ('mono_wasm_load_icu_data', 'number', ['number']);
-				var result = mono_wasm_load_icu_data (icudt.byteOffset);
-				console.log ("mono_wasm_load_icu_data returned", result);
+				var result = mono_wasm_load_icu_data (icudt[0]);
+				console.log ("MONO_WASM: mono_wasm_load_icu_data returned", result);
 			} else {
-				console.log ("no icudt.dat found");
+				console.log ("MONO_WASM: no icudt.dat found");
 			}
 		},
 

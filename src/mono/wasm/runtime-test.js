@@ -288,7 +288,6 @@ if (typeof window == "undefined")
 const IGNORE_PARAM_COUNT = -1;
 
 var App = {
-<<<<<<< HEAD
     init: function () {
 
         var assembly_load = Module.cwrap ('mono_wasm_assembly_load', 'number', ['string'])
@@ -407,110 +406,4 @@ var App = {
             fail_exec ("Unhanded argument: " + args [0]);
         }
     },
-=======
-	init: function () {
-
-		var assembly_load = Module.cwrap ('mono_wasm_assembly_load', 'number', ['string'])
-		var find_class = Module.cwrap ('mono_wasm_assembly_find_class', 'number', ['number', 'string', 'string'])
-		var find_method = Module.cwrap ('mono_wasm_assembly_find_method', 'number', ['number', 'string', 'number'])
-		var runtime_invoke = Module.cwrap ('mono_wasm_invoke_method', 'number', ['number', 'number', 'number', 'number']);
-		var string_from_js = Module.cwrap ('mono_wasm_string_from_js', 'number', ['string']);
-		var assembly_get_entry_point = Module.cwrap ('mono_wasm_assembly_get_entry_point', 'number', ['number']);
-		var string_get_utf8 = Module.cwrap ('mono_wasm_string_get_utf8', 'string', ['number']);
-		var string_array_new = Module.cwrap ('mono_wasm_string_array_new', 'number', ['number']);
-		var obj_array_set = Module.cwrap ('mono_wasm_obj_array_set', 'void', ['number', 'number', 'number']);
-		var exit = Module.cwrap ('mono_wasm_exit', 'void', ['number']);
-		var wasm_setenv = Module.cwrap ('mono_wasm_setenv', 'void', ['string', 'string']);
-		var wasm_set_main_args = Module.cwrap ('mono_wasm_set_main_args', 'void', ['number', 'number']);
-		var wasm_strdup = Module.cwrap ('mono_wasm_strdup', 'number', ['string']);
-		var unbox_int = Module.cwrap ('mono_unbox_int', 'number', ['number']);
-
-		Module.wasm_exit = Module.cwrap ('mono_wasm_exit', 'void', ['number']);
-
-		Module.print("Initializing.....");
-
-		for (var i = 0; i < profilers.length; ++i) {
-			var init = Module.cwrap ('mono_wasm_load_profiler_' + profilers [i], 'void', ['string'])
-
-			init ("");
-		}
-
-		if (args[0] == "--regression") {
-			var exec_regression = Module.cwrap ('mono_wasm_exec_regression', 'number', ['number', 'string'])
-
-			var res = 0;
-				try {
-					res = exec_regression (10, args[1]);
-					Module.print ("REGRESSION RESULT: " + res);
-				} catch (e) {
-					Module.print ("ABORT: " + e);
-					print (e.stack);
-					res = 1;
-				}
-
-			if (res)
-				fail_exec ("REGRESSION TEST FAILED");
-
-			return;
-		}
-
-		if (runtime_args.length > 0)
-			MONO.mono_wasm_set_runtime_options (runtime_args);
-
-		if (args[0] == "--run") {
-			// Run an exe
-			if (args.length == 1)
-				fail_exec ("Error: Missing main executable argument.");
-			main_assembly = assembly_load (args[1]);
-			if (main_assembly == 0)
-				fail_exec ("Error: Unable to load main executable '" + args[1] + "'");
-			main_method = assembly_get_entry_point (main_assembly);
-			if (main_method == 0)
-				fail_exec ("Error: Main (string[]) method not found.");
-
-			var app_args = string_array_new (args.length - 2);
-			for (var i = 2; i < args.length; ++i) {
-				obj_array_set (app_args, i - 2, string_from_js (args [i]));
-			}
-
-			var main_argc = args.length - 2 + 1;
-			var main_argv = Module._malloc (main_argc * 4);
-			aindex = 0;
-			Module.setValue (main_argv + (aindex * 4), wasm_strdup (args [1]), "i32")
-			aindex += 1;
-			for (var i = 2; i < args.length; ++i) {
-				Module.setValue (main_argv + (aindex * 4), wasm_strdup (args [i]), "i32");
-				aindex += 1;
-			}
-			wasm_set_main_args (main_argc, main_argv);
-
-			try {
-				var invoke_args = Module._malloc (4);
-				Module.setValue (invoke_args, app_args, "i32");
-				var eh_exc = Module._malloc (4);
-				Module.setValue (eh_exc, 0, "i32");
-				var res = runtime_invoke (main_method, 0, invoke_args, eh_exc);
-				var eh_res = Module.getValue (eh_exc, "i32");
-				if (eh_res != 0) {
-					print ("Exception:" + string_get_utf8 (res));
-					test_exit (1);
-				}
-				var exit_code = unbox_int (res);
-				if (exit_code != 0)
-					test_exit (exit_code);
-			} catch (ex) {
-				print ("JS exception: " + ex);
-				print (ex.stack);
-				test_exit (1);
-			}
-
-			if (is_browser)
-				test_exit (0);
-
-			return;
-		} else {
-			fail_exec ("Unhanded argument: " + args [0]);
-		}
-	},
->>>>>>> Maybe fix whitespace damage
 };
