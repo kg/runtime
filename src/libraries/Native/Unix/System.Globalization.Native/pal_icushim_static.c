@@ -42,7 +42,7 @@ int32_t GlobalizationNative_LoadICU(void)
         ; // default ICU search path behavior will be used, see http://userguide.icu-project.org/icudata
 
     UErrorCode status = 0;
-    // Invoking u_init will probe to see if ICU common data is already available, and if it is missing,
+    // Invoking u_init will probe to see if ICU common data is already available and if it is missing,
     //  attempt to load it from the local filesystem.
     u_init(&status);
 

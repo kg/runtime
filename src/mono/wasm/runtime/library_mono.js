@@ -787,6 +787,8 @@ var MonoSupportLib = {
 				} else if (args.globalization_mode !== "icu") {
 					console.log ("MONO_WASM: icudt.dat not present, using invariant globalization mode");
 					invariantMode = true;
+				} else {
+					console.log ("MONO_WASM: ERROR: icudt.dat not found and invariant globalization mode is inactive.");
 				}
 			}
 
