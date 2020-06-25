@@ -57,10 +57,10 @@ MONO_LIBS = \
 	${SYS_NATIVE_DIR}/libSystem.Native.a
 
 ifeq ($(ICU_REPO),)
-	@echo "ICU_REPO is not set."
+$(error ICU_REPO not set!)
 else
-	MONO_LIBS := $(MONO_LIBS) $(ICU_REPO)/icu4c/source/wasm-build/lib/{libicui18n.a,libicuio.a,libicuuc.a,libicutu.a} \
-	$(ICU_REPO)/icu4c/source/wasm-build/stubdata/libicudata.a
+MONO_LIBS := $(MONO_LIBS) $(ICU_REPO)/icu4c/source/wasm-build/lib/{libicui18n.a,libicuio.a,libicuuc.a,libicutu.a} \
+$(ICU_REPO)/icu4c/source/wasm-build/stubdata/libicudata.a
 endif
 
 
