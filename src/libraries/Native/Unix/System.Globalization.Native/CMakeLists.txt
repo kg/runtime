@@ -1,7 +1,5 @@
 project(System.Globalization.Native C)
 
-message("//// hello")
-
 if(CLR_CMAKE_TARGET_UNIX)
     add_compile_options(-Wno-switch-enum)
     add_compile_options(-Wno-covered-switch-default)
@@ -15,13 +13,7 @@ if(CLR_CMAKE_TARGET_UNIX)
     add_compile_options(-Wno-extra-semi-stmt)
     add_compile_options(-Wno-unknown-warning-option)
 
-    message("//// CLR_CMAKE_TARGET_UNIX")
-
     if (NOT CLR_CMAKE_TARGET_ANDROID)
-        message("//// NOT CLR_CMAKE_TARGET_ANDROID")
-        message("//// ICU_REPO = ${ICU_REPO}")
-        include_directories("${ICU_REPO}/icu4c/source/common")
-
         set(ICU_HOMEBREW_INC_PATH "/usr/local/opt/icu4c/include")
 
         find_path(UTYPES_H "unicode/utypes.h" PATHS ${ICU_HOMEBREW_INC_PATH})

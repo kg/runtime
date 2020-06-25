@@ -48,7 +48,7 @@ static void* libicui18n = NULL;
     if (fn##_ptr == NULL) { fprintf(stderr, "Cannot get symbol %s from " #lib "\nError: %s\n", symbolName, dlerror()); abort(); }
 
 static int FindSymbolVersion(int majorVer, int minorVer, int subVer, char* symbolName, char* symbolVersion, char* suffix)
-{
+{    
     // Find out the format of the version string added to each symbol
     // First try just the unversioned symbol
     if (dlsym(libicuuc, "u_strlen") == NULL)
@@ -402,8 +402,6 @@ int32_t GlobalizationNative_LoadICU()
         return FALSE;
     }
 #else
-    printf("regular LoadICU\n");
-
     if (!FindICULibs(VERSION_PREFIX_NONE, symbolName, symbolVersion))
     {
         if (!FindICULibs(VERSION_PREFIX_SUSE, symbolName, symbolVersion))
@@ -423,7 +421,7 @@ void GlobalizationNative_InitICUFunctions(void* icuuc, void* icuin, const char* 
     assert(icuuc != NULL);
     assert(icuin != NULL);
     assert(version != NULL);
-
+    
     libicuuc = icuuc;
     libicui18n = icuin;
     int major = -1;
@@ -478,7 +476,7 @@ int32_t GlobalizationNative_GetICUVersion()
 {
     if (u_getVersion_ptr == NULL)
         return 0;
-
+    
     UVersionInfo versionInfo;
     u_getVersion(versionInfo);
 
