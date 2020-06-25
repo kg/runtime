@@ -578,6 +578,10 @@ var MonoSupportLib = {
 		//      mono_wasm_init_aot_profiler. If omitted, aot profiler will not be initialized.
 		//    coverage_profiler_options: (optional) dictionary-style Object. see the comments for
 		//      mono_wasm_init_coverage_profiler. If omitted, coverage profiler will not be initialized.
+		//    globalization_mode: (optional) configures the runtime's globalization mode:
+		//      "icu": load ICU globalization data from the runtime asset "icudt.dat"
+		//      "invariant": operate in invariant globalization mode.
+		//      "auto" (default): if icudt.dat is present, use ICU, otherwise invariant.
 
 		mono_load_runtime_and_bcl_args: function (args) {
 			var deploy_prefix = args.deploy_prefix;
@@ -647,7 +651,7 @@ var MonoSupportLib = {
 					MONO.loaded_files = loaded_files;
 					MONO.loaded_runtime_assets = loaded_runtime_assets;
 
-					MONO._process_runtime_assets (loaded_runtime_assets);
+					MONO._globalization_init (args, loaded_runtime_assets);
 
 					var load_runtime = Module.cwrap ('mono_wasm_load_runtime', null, ['string', 'number']);
 
@@ -765,17 +769,28 @@ var MonoSupportLib = {
 			});
 		},
 
-		_process_runtime_assets: function(dict) {
-			var icudt = dict ["icudt.dat"];
-			if (icudt) {
-				console.log ("MONO_WASM: icudt", icudt);
-				console.log ("MONO_WASM: invoking mono_wasm_load_icu_data", icudt[0]);
-				var mono_wasm_load_icu_data = Module.cwrap ('mono_wasm_load_icu_data', 'number', ['number']);
-				var result = mono_wasm_load_icu_data (icudt[0]);
-				console.log ("MONO_WASM: mono_wasm_load_icu_data returned", result);
-			} else {
-				console.log ("MONO_WASM: no icudt.dat found");
+		_globalization_init: function (args, assets) {
+			var invariantMode = false;
+
+			if (args.globalization_mode === "invariant")
+				invariantMode = true;
+
+			if (!invariantMode) {
+				var icudt = assets ["icudt.dat"];
+
+				if (icudt) {
+					console.log ("MONO_WASM: Loading ICU data archive icudt.dat");
+					var mono_wasm_load_icu_data = Module.cwrap ('mono_wasm_load_icu_data', 'number', ['number']);
+					var result = mono_wasm_load_icu_data (icudt[0]);
+					if (result !== 1)
+						console.log ("MONO_WASM: mono_wasm_load_icu_data returned", result);
+				} else if (args.globalization_mode !== "icu") {
+					console.log ("MONO_WASM: icudt.dat not present, using invariant globalization mode");
+					invariantMode = true;
+				}
 			}
+
+			this.mono_wasm_setenv("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", invariantMode ? "1" : "0");
 		},
 
 		mono_wasm_get_loaded_files: function() {
