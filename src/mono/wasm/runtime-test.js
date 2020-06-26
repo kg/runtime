@@ -139,13 +139,20 @@ while (true) {
 }
 testArguments = args;
 
+function writeContentToFile(content, path)
+{
+	var stream = FS.open(path, 'w+');
+	FS.write(stream, content, 0, content.length, 0);
+	FS.close(stream);
+}
+
 if (typeof window == "undefined")
   load ("mono-config.js");
 
-var Module = {
+var Module = { 
 	mainScriptUrlOrBlob: "dotnet.js",
 
-	print: function(x) { print ("WASM: " + x) },
+	print: print,
 	printErr: function(x) { print ("WASM-ERR: " + x) },
 
 	onAbort: function(x) {
@@ -161,6 +168,37 @@ var Module = {
 		var wasm_setenv = Module.cwrap ('mono_wasm_setenv', 'void', ['string', 'string']);
 		for (var variable in setenv) {
 			MONO.mono_wasm_setenv (variable, setenv [variable]);
+		}
+
+		// Read and write files to virtual file system listed in mono-config
+		if (typeof config.files_to_map != 'undefined') {
+			Module.print("Mapping test support files listed in config.files_to_map to VFS");
+			const files_to_map = config.files_to_map;
+			try {
+				for (var i = 0; i < files_to_map.length; i++)
+				{
+					if (typeof files_to_map[i].directory != 'undefined')
+					{
+						var directory = files_to_map[i].directory == '' ? '/' : files_to_map[i].directory;
+						if (directory != '/') {
+							Module['FS_createPath']('/', directory, true, true);
+						}
+
+						const files = files_to_map[i].files;
+						for (var j = 0; j < files.length; j++)
+						{
+							var fullPath = directory != '/' ? directory + '/' + files[j] : files[j];
+							var content = new Uint8Array (read ("supportFiles/" + fullPath, 'binary'));
+							writeContentToFile(content, fullPath);
+						}
+					}
+				}
+			}
+			catch (err) {
+				Module.printErr(err);
+				Module.printErr(err.stack);
+				test_exit(1);
+			}
 		}
 
 		if (enable_gc) {
@@ -190,55 +228,58 @@ var Module = {
 			Module['FS_createPath']('/zoneinfo', 'Mexico', true, true);
 			Module['FS_createPath']('/zoneinfo', 'Africa', true, true);
 			Module['FS_createPath']('/zoneinfo', 'Chile', true, true);
-			Module['FS_createPath']('/zoneinfo', 'Canada', true, true);
+			Module['FS_createPath']('/zoneinfo', 'Canada', true, true);			
 			var zoneInfoData = read ('zoneinfo.data', 'binary');
 			var metadata = JSON.parse(read ("mono-webassembly-zoneinfo-fs-smd.js.metadata", 'utf-8'));
 			var files = metadata.files;
 			for (var i = 0; i < files.length; ++i) {
 				var byteArray = zoneInfoData.subarray(files[i].start, files[i].end);
-				var stream = FS.open(files[i].filename, 'w+');
-				FS.write(stream, byteArray, 0, byteArray.length, 0);
-				FS.close(stream);
+				writeContentToFile(byteArray, files[i].filename);
 			}
-		};
+		}
 
-		config.loaded_cb = function () {
-			App.init ();
-		};
-		config.fetch_file_cb = function (asset) {
-		  if (typeof window != 'undefined') {
-			return fetch (asset, { credentials: 'same-origin' });
-		  } else {
-			// The default mono_load_runtime_and_bcl defaults to using
-			// fetch to load the assets.  It also provides a way to set a
-			// fetch promise callback.
-			// Here we wrap the file read in a promise and fake a fetch response
-			// structure.
-			return new Promise ((resolve, reject) => {
-				var bytes = null, error = null;
-				try {
-					bytes = read (asset, 'binary');
-				} catch (exc) {
-					error = exc;
-					console.log ("fetch_file_cb failed", asset, exc);
-				}
-				var response = { ok: (bytes && !error), url: asset,
-					arrayBuffer: function () {
-						return new Promise ((resolve2, reject2) => {
-							if (error)
-								reject2 (error);
-							else
-								resolve2 (new Uint8Array (bytes));
-					}
-				)}
-				}
-			   resolve (response);
-			 })
-		  }
-		};
+        config.loaded_cb = function () {
+            App.init ();
+        };
+        config.fetch_file_cb = function (asset) {
+            // for testing purposes add BCL assets to VFS until we special case File.Open
+            // to identify when an assembly from the BCL is being open and resolve it correctly.
+            var content = new Uint8Array (read (asset, 'binary'));
+            var path = asset.substr(config.deploy_prefix.length);
+            writeContentToFile(content, path);
 
-		MONO.mono_load_runtime_and_bcl_args (config);
-	},
+            if (typeof window != 'undefined') {
+            	return fetch (asset, { credentials: 'same-origin' });
+            } else {
+                // The default mono_load_runtime_and_bcl defaults to using
+                // fetch to load the assets.  It also provides a way to set a
+                // fetch promise callback.
+                // Here we wrap the file read in a promise and fake a fetch response
+                // structure.
+	            return new Promise ((resolve, reject) => {
+	                var bytes = null, error = null;
+	                try {
+	                    bytes = read (asset, 'binary');
+	                } catch (exc) {
+	                    error = exc;
+	                }
+	                var response = { ok: (bytes && !error), url: asset,
+	                    arrayBuffer: function () {
+	                        return new Promise ((resolve2, reject2) => {
+	                            if (error)
+	                                reject2 (error);
+	                            else
+	                                resolve2 (new Uint8Array (bytes));
+	                    }
+	                )}
+	                }
+	                resolve (response);
+	            })
+            }
+        };
+
+        MONO.mono_load_runtime_and_bcl_args (config);
+    },
 };
 
 if (typeof window == "undefined")
@@ -247,7 +288,7 @@ if (typeof window == "undefined")
 const IGNORE_PARAM_COUNT = -1;
 
 var App = {
-	init: function () {
+    init: function () {
 
 		var assembly_load = Module.cwrap ('mono_wasm_assembly_load', 'number', ['string'])
 		var find_class = Module.cwrap ('mono_wasm_assembly_find_class', 'number', ['number', 'string', 'string'])
@@ -343,6 +384,20 @@ var App = {
 				test_exit (1);
 			}
 
+/*
+			// For testing tp/timers etc.
+			while (true) {
+				// Sleep by busy waiting
+				var start = performance.now ();
+				useconds = 1e6 / 10;
+				while (performance.now() - start < useconds / 1000) {
+					// Do nothing.
+				}
+
+				Module.pump_message ();
+			}
+*/
+
 			if (is_browser)
 				test_exit (0);
 
@@ -350,5 +405,5 @@ var App = {
 		} else {
 			fail_exec ("Unhanded argument: " + args [0]);
 		}
-	},
+    },
 };
