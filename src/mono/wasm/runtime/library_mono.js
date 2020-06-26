@@ -595,17 +595,6 @@ var MonoSupportLib = {
 			if (!loaded_cb)
 				throw new Error ("loaded_cb not provided");
 
-			if (args.globalization_mode) {
-				switch (args.globalization_mode) {
-					case "icu":
-					case "invariant":
-					case "auto":
-						break;
-					default:
-						throw new Error ("Invalid option for globalization_mode: " + args.globalization_mode);
-				}
-			}
-
 			var pending = file_list.length + runtime_assets.length;
 			var loaded_files = [];
 			var loaded_runtime_assets = {};
@@ -662,7 +651,7 @@ var MonoSupportLib = {
 					MONO.loaded_files = loaded_files;
 					MONO.loaded_runtime_assets = loaded_runtime_assets;
 
-					MONO._mono_wasm_globalization_init (args, loaded_runtime_assets);
+					MONO._globalization_init (args, loaded_runtime_assets);
 
 					var load_runtime = Module.cwrap ('mono_wasm_load_runtime', null, ['string', 'number']);
 
@@ -710,8 +699,7 @@ var MonoSupportLib = {
 
 					onPendingRequestComplete ();
 				} catch (exc) {
-					console.log ("Unhandled exception in processFetchResponseBuffer", exc);
-					throw exc;
+					console.log ("Unhandled exception", exc);
 				}
 			};
 
@@ -733,15 +721,9 @@ var MonoSupportLib = {
 
 				attemptNextSource = function (file_name) {
 					if (sourceIndex >= runtime_asset_sources.length) {
-						var msg = "MONO-WASM: Failed to load asset: '" + file_name + "' after attempting all sources";
+						console.log ("MONO_WASM: Failed to load " + file_name);
 						--pending;
-
-						if (MONO.mono_wasm_ignore_asset_load_errors)
-							console.error (msg);
-						else
-							throw new Error (msg);
-
-						return;
+						throw new Error ("MONO-WASM: Failed to load asset: '" + file_name + "' after attempting all sources");
 					}
 
 					var sourcePrefix = runtime_asset_sources[sourceIndex];
@@ -768,8 +750,9 @@ var MonoSupportLib = {
 						// We'll just skip that file and continue (though the 404 is logged in the console).
 						if (response.status === 404 && file_name.match (/\.pdb$/) && MONO.mono_wasm_ignore_pdb_load_errors) {
 							--pending;
-							console.error ("MONO-WASM: Skipping failed load for .pdb file: '" + file_name + "'");
-						} else {
+							throw new Error ("MONO-WASM: Skipping failed load for .pdb file: '" + file_name + "'");
+						}
+						else {
 							throw new Error ("MONO_WASM: Failed to load file: '" + file_name + "'");
 						}
 					}
@@ -786,7 +769,7 @@ var MonoSupportLib = {
 			});
 		},
 
-		_mono_wasm_globalization_init: function (args, assets) {
+		_globalization_init: function (args, assets) {
 			var invariantMode = false;
 
 			if (args.globalization_mode === "invariant")
@@ -800,12 +783,12 @@ var MonoSupportLib = {
 					var mono_wasm_load_icu_data = Module.cwrap ('mono_wasm_load_icu_data', 'number', ['number']);
 					var result = mono_wasm_load_icu_data (icudt[0]);
 					if (result !== 1)
-						console.error ("MONO_WASM: mono_wasm_load_icu_data returned", result);
+						console.log ("MONO_WASM: mono_wasm_load_icu_data returned", result);
 				} else if (args.globalization_mode !== "icu") {
 					console.log ("MONO_WASM: icudt.dat not present, using invariant globalization mode");
 					invariantMode = true;
 				} else {
-					console.error ("MONO_WASM: icudt.dat not found and invariant globalization mode is inactive.");
+					console.log ("MONO_WASM: ERROR: icudt.dat not found and invariant globalization mode is inactive.");
 				}
 			}
 
