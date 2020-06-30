@@ -537,27 +537,13 @@ var MonoSupportLib = {
 			Module.ccall ('mono_wasm_load_profiler_coverage', null, ['string'], [arg]);
 		},
 
-		mono_load_runtime_and_bcl: function (
-			vfs_prefix, deploy_prefix, enable_debugging,
-			file_list, loaded_cb, fetch_file_cb
-		) {
-			return this.mono_load_runtime_and_bcl_args({
-				vfs_prefix: vfs_prefix,
-				deploy_prefix: deploy_prefix,
-				enable_debugging: enable_debugging,
-				file_list: file_list,
-				loaded_cb: loaded_cb,
-				fetch_file_cb: fetch_file_cb
-			});
-		},
-
 		// Initializes the runtime and loads assemblies, debug information, and other files.
 		// @args is a dictionary-style Object with the following properties:
 		//    vfs_prefix: (required)
 		//    deploy_prefix: (required)
 		//    enable_debugging: (required)
-		//    file_list: (required) a list of filenames to load along with the runtime.
-		//      .pdb files in this list will be treated as optional.
+		//    assembly_list: (required) a list of assemblies and related files to load along
+		//      with the runtime. .pdb files in this list will be treated as optional.
 		//    loaded_cb: (required) a function () invoked when loading has completed.
 		//    fetch_file_cb: (optional) a function (string) invoked to fetch a given file.
 		//      If no callback is provided a default implementation appropriate for the current
@@ -570,7 +556,7 @@ var MonoSupportLib = {
 		//      if no runtime asset sources are provided the default will be ["./"].
 		//      sources will be checked in sequential order until the asset is found.
 		//      the string "./" indicates to load from the application directory (as with the
-		//      files in file_list), and a fully-qualified URL like "https://example.com/" indicates
+		//      files in assembly_list), and a fully-qualified URL like "https://example.com/" indicates
 		//      that asset loads can be attempted from a remote server. Sources must end with a /.
 		//    environment_variables: (optional) dictionary-style Object containing environment variables
 		//    runtime_options: (optional) array of runtime options as strings
@@ -585,17 +571,19 @@ var MonoSupportLib = {
 
 		mono_load_runtime_and_bcl_args: function (args) {
 			var deploy_prefix = args.deploy_prefix;
-			var file_list = args.file_list;
+			var assembly_list = args.assembly_list;
 			var loaded_cb = args.loaded_cb;
 			var fetch_file_cb = args.fetch_file_cb;
 			var runtime_assets = (args.runtime_assets || []);
 
-			if (!file_list)
-				throw new Error ("file_list not provided");
+			if (!assembly_list)
+				throw new Error ("assembly_list not provided");
 			if (!loaded_cb)
 				throw new Error ("loaded_cb not provided");
 
-			var pending = file_list.length + runtime_assets.length;
+			console.log ("mono_wasm_load_runtime_with_args", JSON.stringify(args));
+
+			var pending = assembly_list.length + runtime_assets.length;
 			var loaded_files = [];
 			var loaded_runtime_assets = {};
 			var mono_wasm_add_assembly = Module.cwrap ('mono_wasm_add_assembly', null, ['string', 'number', 'number']);
@@ -721,9 +709,9 @@ var MonoSupportLib = {
 
 				attemptNextSource = function (file_name) {
 					if (sourceIndex >= runtime_asset_sources.length) {
-						console.log ("MONO_WASM: Failed to load " + file_name);
+						console.error ("MONO_WASM: Failed to load " + file_name);
 						--pending;
-						throw new Error ("MONO-WASM: Failed to load asset: '" + file_name + "' after attempting all sources");
+						return;
 					}
 
 					var sourcePrefix = runtime_asset_sources[sourceIndex];
@@ -734,16 +722,20 @@ var MonoSupportLib = {
 						sourcePrefix = "";
 
 					var attemptUrl = sourcePrefix + file_name;
-					console.log ("MONO_WASM: Attempting load of", file_name, "from", attemptUrl);
 
-					var fetch_promise = fetch_file_cb (attemptUrl);
-					fetch_promise.then (handleFetchResponse.bind (this, file_name));
+					try {
+						var fetch_promise = fetch_file_cb (attemptUrl);
+						fetch_promise.then (handleFetchResponse.bind (this, file_name));
+					} catch (exc) {
+						console.error ("MONO_WASM: Error fetching " + attemptUrl, exc);
+						attemptNextSource (file_name);
+					}
 				};
 
 				attemptNextSource (file_name);
 			});
 
-			file_list.forEach (function (file_name) {
+			assembly_list.forEach (function (file_name) {
 				var handleFetchResponse = function (response) {
 					if (!response.ok) {
 						// If it's a 404 on a .pdb, we don't want to block the app from starting up.
