@@ -124,8 +124,9 @@
       <AssemblySearchPaths Include="$(PublishDir)"/>
       <WasmFilesToIncludeInFileSystem Include="@(ContentWithTargetPath)" />
       <WasmFilesToIncludeInFileSystem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.BuildReference)' == 'true'" />
+      <AssetSources Include="./" />
+      <Assets Include="icudt.dat" />
     </ItemGroup>
-
     <Error Condition="!Exists('$(MicrosoftNetCoreAppRuntimePackRidDir)')" Text="MicrosoftNetCoreAppRuntimePackRidDir=$(MicrosoftNetCoreAppRuntimePackRidDir) doesn't exist" />
     <WasmAppBuilder
       AppDir="$(BundleDir)"
@@ -134,7 +135,11 @@
       MainJS="$(MonoProjectRoot)\wasm\runtime-test.js"
       ExtraAssemblies="$(PublishDir)$(AssemblyName).dll"
       FilesToIncludeInFileSystem="@(WasmFilesToIncludeInFileSystem)"
-      AssemblySearchPaths="@(AssemblySearchPaths)" />
+      AssemblySearchPaths="@(AssemblySearchPaths)"
+      AssetSources="@(AssetSources)"
+      Assets="@(Assets)" />
+      <Copy SourceFiles="$(ICU_REPO)\icu4c\source\data\out\tmp\icudt67l.dat"
+            DestinationFiles="$(BundleDir)\icudt.dat" SkipUnchangedFiles="true"/>
   </Target>
 
   <Target Name="AddTestRunnersToPublishedFiles"
