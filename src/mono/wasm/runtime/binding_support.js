@@ -741,7 +741,7 @@ var BindingSupportLib = {
 		_create_converter_for_marshal_string: function (args_marshal) {
 			var steps = [];
 			var size = 0;
-			var is_result_definitely_marshaled = false;
+			var is_result_definitely_unmarshaled = false;
 
 			for (var i = 0; i < args_marshal.length; ++i) {
 				var key = args_marshal[i];
@@ -751,7 +751,7 @@ var BindingSupportLib = {
 						throw new Error ("! must be at the end of the signature");
 					else {
 						key = "m";
-						is_result_definitely_marshaled = true;
+						is_result_definitely_unmarshaled = true;
 					}
 				}
 
@@ -766,7 +766,7 @@ var BindingSupportLib = {
 				size += conv.size;
 			}
 
-			return { steps: steps, size: size, args_marshal: args_marshal, is_result_definitely_marshaled: is_result_definitely_marshaled };
+			return { steps: steps, size: size, args_marshal: args_marshal, is_result_definitely_unmarshaled: is_result_definitely_unmarshaled };
 		},
 
 		_get_converter_for_marshal_string: function (args_marshal) {
@@ -878,8 +878,6 @@ var BindingSupportLib = {
 				throw exc;
 			}
 
-			converter.is_result_marshaled = args_marshal.endsWith("!");
-
 			return converter;
 		},
 
@@ -936,7 +934,7 @@ var BindingSupportLib = {
 						converter.has_warned_about_signature = true;
 					}
 				} else {
-					is_result_marshaled = converter.is_result_marshaled;
+					is_result_marshaled = !converter.is_result_definitely_unmarshaled;
 				}
 
 				if (converter.scratchRootBuffer) {
