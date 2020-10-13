@@ -690,17 +690,28 @@ var BindingSupportLib = {
 		},
 
 		extract_mono_obj: function (js_obj) {
-
 			if (js_obj === null || typeof js_obj === "undefined")
 				return 0;
 
-			if (!js_obj.is_mono_bridged_obj) {
-				var gc_handle = this.mono_wasm_register_obj(js_obj);
-				return this.wasm_get_raw_obj (gc_handle);
+			var result = null;
+			var gc_handle = js_obj.__mono_gchandle__;
+			if (gc_handle) {
+				result = this.wasm_get_raw_obj (gc_handle);
+
+				// It's possible the managed object corresponding to this JS object was collected,
+				//  in which case we need to make a new one.
+				if (!result) {
+					delete js_obj.__mono_gchandle__;
+					delete js_obj.is_mono_bridged_obj;
+				}
 			}
 
+			if (!result) {
+				gc_handle = this.mono_wasm_register_obj(js_obj);
+				result = this.wasm_get_raw_obj (gc_handle);
+			}
 
-			return this.wasm_get_raw_obj (js_obj.__mono_gchandle__);
+			return result;
 		},
 
 		extract_js_obj: function (mono_obj) {
@@ -1747,13 +1758,13 @@ var BindingSupportLib = {
 
 		var js_name = BINDING.conv_string (global_name);
 
-		var globalObj = undefined;
+		var globalObj = BINDING.mono_wasm_get_global ();
 
-		if (!js_name) {
-			globalObj = BINDING.mono_wasm_get_global();
-		}
-		else {
-			globalObj = BINDING.mono_wasm_get_global()[js_name];
+		if (js_name === null) {
+			if (global_name !== 0)
+				throw new Error("conv_string failed to convert string");
+		} else {
+			globalObj = globalObj[js_name];
 		}
 
 		if (globalObj === null || typeof globalObj === undefined) {
