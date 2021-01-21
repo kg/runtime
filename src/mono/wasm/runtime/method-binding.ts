@@ -2,26 +2,32 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 import { WasmRoot, WasmRootBuffer, mono_wasm_new_root } from "./roots";
-import { MonoClass, MonoMethod, MonoObject, coerceNull, VoidPtrNull, VoidPtr, MonoType } from "./types";
+import { 
+    MonoClass, MonoMethod, MonoObject, coerceNull, 
+    VoidPtrNull, VoidPtr, MonoType, MarshalSignatureInfo, MarshalType
+} from "./types";
 import { BINDING, runtimeHelpers } from "./modules";
 import { js_to_mono_enum, _js_to_mono_obj, _js_to_mono_uri } from "./js-to-cs";
 import { js_string_to_mono_string, js_string_to_mono_string_interned } from "./strings";
-import { MarshalType, _unbox_mono_obj_root_with_known_nonprimitive_type } from "./cs-to-js";
 import { 
     _create_temp_frame, 
     getI32, getU32, getF32, getF64, 
     setI32, setU32, setF32, setF64, setI64,
 } from "./memory";
-import {
+import { _unbox_mono_obj_root_with_known_nonprimitive_type } from "./cs-to-js";
+import { _pick_automatic_converter } from "./custom-marshaler";
+import { 
     _get_args_root_buffer_for_method_call, _get_buffer_for_method_call,
     _handle_exception_for_call, _teardown_after_call
 } from "./method-calls";
 import cwraps from "./cwraps";
+import cswraps from "./corebindings";
 
 const primitiveConverters = new Map<string, Converter>();
-const _signature_converters = new Map<string, Converter>();
+const _signature_converters = new Map<string, Converter | Map<MonoMethod, Converter>>();
 const _method_descriptions = new Map<MonoMethod, string>();
-
+const _method_signature_info_table = new Map<MonoMethod, MarshalSignatureInfo>();
+const _bound_method_cache = new Map<string, Function>();
 
 export function _get_type_name(typePtr: MonoType): string {
     if (!typePtr)
@@ -138,17 +144,59 @@ export function _create_primitive_converters(): void {
     result.set("d", { steps: [{ indirect: "double" }], size: 8 });
 }
 
-function _create_converter_for_marshal_string(args_marshal: ArgsMarshalString): Converter {
+export function get_method_signature_info (typePtr : MonoType, methodPtr : MonoMethod) : MarshalSignatureInfo {
+    if (!methodPtr)
+        throw new Error("Method ptr not provided");
+        
+    let result = _method_signature_info_table.get(methodPtr);
+    let classMismatch = !!result && (result.typePtr !== typePtr);
+    if (!result) {
+        let typeName = _get_type_name(typePtr);
+        let json = cswraps.make_marshal_signature_info(typePtr, methodPtr);
+        if (!json)
+            throw new Error(`MakeMarshalSignatureInfo failed for type ${typeName}`);
+
+        result = <MarshalSignatureInfo>JSON.parse(json);
+        result.typePtr = typePtr;
+
+        if (classMismatch)
+            console.log("WARNING: Class ptr mismatch for signature info, so caching is disabled");
+        else
+            _method_signature_info_table.set(methodPtr, result);
+    }
+    return result;
+}
+
+function _create_converter_for_marshal_string(typePtr: MonoType, method: MonoMethod, args_marshal: ArgsMarshalString): Converter {
+    let sigInfo : any = null;
     const steps = [];
     let size = 0;
     let is_result_definitely_unmarshaled = false,
         is_result_possibly_unmarshaled = false,
         result_unmarshaled_if_argc = -1,
-        needs_root_buffer = false;
+        needs_root_buffer = false,
+        depends_on_method_arguments = false;
 
     for (let i = 0; i < args_marshal.length; ++i) {
         const key = args_marshal[i];
 
+        if (key === "a") {
+            if (!method)
+                throw new Error("Cannot use automatic argument type handling without a method ptr");
+            if (!sigInfo)
+                sigInfo = get_method_signature_info(typePtr, method);
+            if (!sigInfo)
+                throw new Error(`Failed to get signature info for method ${method}`);
+            depends_on_method_arguments = true;
+            let step = _pick_automatic_converter(method, args_marshal, sigInfo.parameters[i]);
+            if (!step)
+                throw new Error(`Failed to select an automatic converter for parameter #${i} of method ${method}`);
+            steps.push(step);
+            needs_root_buffer = true;
+            size += step.size;
+            continue;
+        }
+        
         if (i === args_marshal.length - 1) {
             if (key === "!") {
                 is_result_definitely_unmarshaled = true;
@@ -175,6 +223,7 @@ function _create_converter_for_marshal_string(args_marshal: ArgsMarshalString): 
     }
 
     return {
+        method: depends_on_method_arguments ? method : null,
         steps, size, args_marshal,
         is_result_definitely_unmarshaled,
         is_result_possibly_unmarshaled,
@@ -183,25 +232,40 @@ function _create_converter_for_marshal_string(args_marshal: ArgsMarshalString): 
     };
 }
 
-function _get_converter_for_marshal_string(args_marshal: ArgsMarshalString): Converter {
+function _get_converter_for_marshal_string(typePtr: MonoType, method: MonoMethod, args_marshal: ArgsMarshalString): Converter {
     let converter = _signature_converters.get(args_marshal);
+    let map : Map<MonoMethod, Converter> | null = null;
+    if (converter instanceof Map) {
+        map = converter;
+        converter = map.get(method);
+    }
+
     if (!converter) {
-        converter = _create_converter_for_marshal_string(args_marshal);
-        _signature_converters.set(args_marshal, converter);
+        converter = _create_converter_for_marshal_string(typePtr, method, args_marshal);
+        if (converter.method) {
+            if (!map)
+                _signature_converters.set(args_marshal, map = new Map<MonoMethod, Converter>());
+            map.set(converter.method, converter);
+        } else {
+            _signature_converters.set(args_marshal, converter);
+        }
     }
 
     return converter;
 }
 
-export function _compile_converter_for_marshal_string(args_marshal: ArgsMarshalString): Converter {
-    const converter = _get_converter_for_marshal_string(args_marshal);
+export function _compile_converter_for_marshal_string(typePtr: MonoType, method: MonoMethod, args_marshal: ArgsMarshalString): Converter {
+    const converter = _get_converter_for_marshal_string(typePtr, method, args_marshal);
     if (typeof (converter.args_marshal) !== "string")
         throw new Error("Corrupt converter for '" + args_marshal + "'");
 
     if (converter.compiled_function && converter.compiled_variadic_function)
         return converter;
 
-    const converterName = args_marshal.replace("!", "_result_unmarshaled");
+    let converterName = args_marshal.replace("!", "_result_unmarshaled");
+    // Disambiguate different auto converters in the debugger and stack traces
+    if (args_marshal.indexOf("a") >= 0)
+        converterName += "_for_method" + method;
     converter.name = converterName;
 
     let body = [];
@@ -227,7 +291,7 @@ export function _compile_converter_for_marshal_string(args_marshal: ArgsMarshalS
 
     body.push(
         "if (!method) throw new Error('no method provided');",
-        `if (!buffer) buffer = _malloc (${bufferSizeBytes});`,
+        `if (!buffer) buffer = _malloc(${bufferSizeBytes});`,
         `let indirectStart = buffer + ${indirectBaseOffset};`,
         ""
     );
@@ -249,7 +313,7 @@ export function _compile_converter_for_marshal_string(args_marshal: ArgsMarshalS
 
         if (step.needs_root) {
             body.push("if (!rootBuffer) throw new Error('no root buffer provided');");
-            body.push(`rootBuffer.set (${i}, ${valueKey});`);
+            body.push(`rootBuffer.set(${i}, ${valueKey});`);
         }
 
         // HACK: needs_unbox indicates that we were passed a pointer to a managed object, and either
@@ -257,7 +321,7 @@ export function _compile_converter_for_marshal_string(args_marshal: ArgsMarshalS
         //  pass the raw address of its boxed value into the callee.
         // FIXME: I don't think this is GC safe
         if (step.needs_unbox)
-            body.push(`${valueKey} = mono_wasm_unbox_rooted (${valueKey});`);
+            body.push(`${valueKey} = mono_wasm_unbox_rooted(${valueKey});`);
 
         if (step.indirect) {
             const offsetText = `(indirectStart + ${indirectLocalOffset})`;
@@ -376,9 +440,24 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
         throw new Error("args_marshal argument invalid, expected string");
     this_arg = coerceNull(this_arg);
 
+    // We implement a simple lookup cache here to prevent repeated bind_method calls on the same target
+    //  from exhausting the set of available scratch roots. This is mostly useful for automated tests,
+    //  but it may also save some naive callers from rare runtime failures
+    let cacheKey = `m${method}_a${args_marshal}`;
+    if (!this_arg) {
+        if (_bound_method_cache.has(cacheKey)) {
+            let cacheHit = _bound_method_cache.get(cacheKey);
+            return <Function>cacheHit;
+        }
+    }
+
     let converter: Converter | null = null;
     if (typeof (args_marshal) === "string") {
-        converter = _compile_converter_for_marshal_string(args_marshal);
+        let classPtr = cwraps.mono_wasm_get_class_for_bind_or_invoke(this_arg, method);
+        if (!classPtr)
+            throw new Error(`Could not get class ptr for bind_method with this (${this_arg}) and method (${method})`);
+        let typePtr = cwraps.mono_wasm_class_get_type(classPtr);
+        converter = _compile_converter_for_marshal_string(typePtr, method, args_marshal);
     }
 
     // FIXME
@@ -427,9 +506,9 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
         "token.scratchResultRoot = null;",
         "token.scratchExceptionRoot = null;",
         "if (resultRoot === null)",
-        "	resultRoot = mono_wasm_new_root ();",
+        "	resultRoot = mono_wasm_new_root();",
         "if (exceptionRoot === null)",
-        "	exceptionRoot = mono_wasm_new_root ();",
+        "	exceptionRoot = mono_wasm_new_root();",
         ""
     ];
 
@@ -442,7 +521,7 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
         );
 
         for (let i = 0; i < converter.steps.length; i++) {
-            const argName = "arg" + i;
+            let argName = "arg" + i;
             argumentNames.push(argName);
             body.push(
                 "    " + argName +
@@ -479,8 +558,8 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
     // The end result is that bound method invocations don't always allocate, so no more nursery GCs. Yay! -kg
     body.push(
         "",
-        "resultRoot.value = invoke_method (method, this_arg, buffer, exceptionRoot.get_address ());",
-        `_handle_exception_for_call (${converterKey}, token, buffer, resultRoot, exceptionRoot, argsRootBuffer);`,
+        "resultRoot.value = invoke_method(method, this_arg, buffer, exceptionRoot.get_address());",
+        `_handle_exception_for_call(${converterKey}, token, buffer, resultRoot, exceptionRoot, argsRootBuffer);`,
         "",
         "let resultPtr = resultRoot.value, result = undefined;"
     );
@@ -488,10 +567,10 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
     if (converter) {
         if (converter.is_result_possibly_unmarshaled)
             body.push("if (!is_result_marshaled) ");
-
+        
         if (converter.is_result_definitely_unmarshaled || converter.is_result_possibly_unmarshaled)
             body.push("    result = resultPtr;");
-
+        
         if (!converter.is_result_definitely_unmarshaled)
             body.push(
                 "if (is_result_marshaled && (resultPtr !== 0)) {",
@@ -499,7 +578,7 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
                 //  into our existing heap allocation and then read it out of the heap. Doing this all in one operation
                 //  means that we only need to enter a gc safe region twice (instead of 3+ times with the normal,
                 //  slower check-type-and-then-unbox flow which has extra checks since unbox verifies the type).
-                "    let resultType = mono_wasm_try_unbox_primitive_and_get_type (resultPtr, unbox_buffer, unbox_buffer_size);",
+                "    let resultType = mono_wasm_try_unbox_primitive_and_get_type(resultPtr, unbox_buffer, unbox_buffer_size);",
                 "    switch (resultType) {",
                 `    case ${MarshalType.INT}:`,
                 "        result = getI32(unbox_buffer); break;",
@@ -515,7 +594,7 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
                 `    case ${MarshalType.CHAR}:`,
                 "        result = String.fromCharCode(getI32(unbox_buffer)); break;",
                 "    default:",
-                "        result = _unbox_mono_obj_root_with_known_nonprimitive_type (resultRoot, resultType, unbox_buffer); break;",
+                "        result = _unbox_mono_obj_root_with_known_nonprimitive_type(resultRoot, resultType, unbox_buffer); break;",
                 "    }",
                 "}"
             );
@@ -524,7 +603,7 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
     }
 
     if (friendly_name) {
-        const escapeRE = /[^A-Za-z0-9_$]/g;
+        const escapeRE = /[^A-Za-z0-9_\$]/g;
         friendly_name = friendly_name.replace(escapeRE, "_");
     }
 
@@ -534,13 +613,18 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
         displayName += "_this" + this_arg;
 
     body.push(
-        `_teardown_after_call (${converterKey}, token, buffer, resultRoot, exceptionRoot, argsRootBuffer);`,
+        `_teardown_after_call(${converterKey}, token, buffer, resultRoot, exceptionRoot, argsRootBuffer);`,
         "return result;"
     );
 
-    const bodyJs = body.join("\r\n");
+    let bodyJs = body.join("\r\n");
 
-    const result = _create_named_function(displayName, argumentNames, bodyJs, closure);
+    let result = _create_named_function(displayName, argumentNames, bodyJs, closure);
+
+    // HACK: If the bound method has a this-arg, we don't want to store it into the cache
+    //  since this indicates that the caller may be binding lots of methods onto instances
+    if (!this_arg)
+        _bound_method_cache.set(cacheKey, result);
 
     return result;
 }
@@ -556,6 +640,7 @@ declare const enum ArgsMarshal {
     Char = "s", // interned string
     JSObj = "o", // js object will be converted to a C# object (this will box numbers/bool/promises)
     MONOObj = "m", // raw mono object. Don't use it unless you know what you're doing
+    Auto = "a", // the bindings layer will select an appropriate converter based on the C# method signature
 }
 
 // to suppress marshaling of the return value, place '!' at the end of args_marshal, i.e. 'ii!' instead of 'ii'

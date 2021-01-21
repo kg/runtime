@@ -2,7 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 import { INTERNAL, Module, MONO, runtimeHelpers } from "./modules";
-import { AssetEntry, CharPtr, CharPtrNull, EmscriptenModuleMono, GlobalizationMode, MonoConfig, TypedArray, VoidPtr, wasm_type_symbol } from "./types";
+import { 
+    AssetEntry, CharPtr, CharPtrNull, MonoConfig, MonoString,
+    TypedArray, VoidPtr, wasm_type_symbol, MonoStringNull,
+    EmscriptenModuleMono, GlobalizationMode
+} from "./types";
 import cwraps from "./cwraps";
 import { mono_wasm_raise_debug_event, mono_wasm_runtime_ready } from "./debug";
 import { mono_wasm_globalization_init, mono_wasm_load_icu_data } from "./icu";
@@ -10,6 +14,8 @@ import { toBase64StringImpl } from "./base64";
 import { mono_wasm_init_aot_profiler, mono_wasm_init_coverage_profiler } from "./profiler";
 import { mono_wasm_load_bytes_into_heap } from "./buffers";
 import { bind_runtime_method, get_method, _create_primitive_converters } from "./method-binding";
+import { conv_string } from "./strings";
+import { _custom_marshaler_name_table } from "./custom-marshaler";
 import { find_corlib_class } from "./class-loader";
 
 export async function mono_wasm_pre_init(): Promise<void> {
@@ -139,6 +145,12 @@ export function mono_load_runtime_and_bcl_args(args: MonoConfig): void {
     }
 }
 
+export function mono_wasm_register_custom_marshaler (aqn: string, marshalerAQN: string) {
+    if (_custom_marshaler_name_table[aqn])
+        throw new Error(`A custom marshaler for ${aqn} is already registered.`);
+    _custom_marshaler_name_table[aqn] = marshalerAQN;			
+}
+        
 function _apply_configuration_from_args(args: MonoConfig) {
     for (const k in (args.environment_variables || {}))
         mono_wasm_setenv(k, args.environment_variables![k]);
@@ -151,6 +163,9 @@ function _apply_configuration_from_args(args: MonoConfig) {
 
     if (args.coverage_profiler_options)
         mono_wasm_init_coverage_profiler(args.coverage_profiler_options);
+
+    if (args.custom_marshalers)
+        Object.assign(_custom_marshaler_name_table, args.custom_marshalers);
 }
 
 function _get_fetch_file_cb_from_args(args: MonoConfig): (asset: string) => Promise<Response> {

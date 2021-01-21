@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+import { runtimeHelpers } from "./modules";
 import { mono_wasm_get_jsobj_from_js_handle } from "./gc-handles";
 import { wrap_error } from "./method-calls";
 import { Int32Ptr, JSHandle, MonoString } from "./types";
@@ -43,6 +44,8 @@ export function _create_cancelable_promise(afterResolve?: () => void, afterRejec
             resolve: (data: any) => {
                 if (!promise_control!.isDone) {
                     promise_control!.isDone = true;
+                    if ((<any>runtimeHelpers.config).record_task_results_for_automated_tests)
+                        (<any>promise).__for_automated_test_use_only__task_result = data;
                     resolve(data);
                     if (afterResolve) {
                         afterResolve();

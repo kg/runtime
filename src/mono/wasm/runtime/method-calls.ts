@@ -159,7 +159,12 @@ export function call_method(method: MonoMethod, this_arg: MonoObject | undefined
 
     // check if the method signature needs argument mashalling
     if (needs_converter) {
-        converter = _compile_converter_for_marshal_string(args_marshal);
+        const classPtr = cwraps.mono_wasm_get_class_for_bind_or_invoke(this_arg, method);
+        if (!classPtr)
+            throw new Error (`Could not get class ptr for call_method with this (${this_arg}) and method (${method})`);
+
+        const typePtr = cwraps.mono_wasm_class_get_type(classPtr);
+        converter = _compile_converter_for_marshal_string(typePtr, method, args_marshal);
 
         is_result_marshaled = _decide_if_result_is_marshaled(converter, args.length);
 
@@ -175,7 +180,7 @@ export function call_method(method: MonoMethod, this_arg: MonoObject | undefined
 
 export function _handle_exception_for_call(
     converter: Converter | undefined, token: BoundMethodToken | null,
-    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>,
+    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>, 
     exceptionRoot: WasmRoot<MonoObject>, argsRootBuffer?: WasmRootBuffer
 ): void {
     const exc = _convert_exception_for_method_call(resultRoot.value, exceptionRoot.value);
@@ -188,8 +193,8 @@ export function _handle_exception_for_call(
 
 function _handle_exception_and_produce_result_for_call(
     converter: Converter | undefined, token: BoundMethodToken | null,
-    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>,
-    exceptionRoot: WasmRoot<MonoObject>, argsRootBuffer: WasmRootBuffer | undefined,
+    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>, 
+    exceptionRoot: WasmRoot<MonoObject>, argsRootBuffer: WasmRootBuffer | undefined, 
     is_result_marshaled: boolean
 ): any {
     _handle_exception_for_call(converter, token, buffer, resultRoot, exceptionRoot, argsRootBuffer);
@@ -205,7 +210,7 @@ function _handle_exception_and_produce_result_for_call(
 
 export function _teardown_after_call(
     converter: Converter | undefined, token: BoundMethodToken | null,
-    buffer: VoidPtr, resultRoot: WasmRoot<any>,
+    buffer: VoidPtr, resultRoot: WasmRoot<any>, 
     exceptionRoot: WasmRoot<any>, argsRootBuffer?: WasmRootBuffer
 ): void {
     _release_temp_frame();

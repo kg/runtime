@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-import {
-    CharPtr, CharPtrPtr, Int32Ptr,
-    MonoArray, MonoAssembly, MonoClass,
-    MonoMethod, MonoObject, MonoString,
-    MonoType, VoidPtr
+import { 
+    CharPtr, CharPtrPtr, Int32Ptr, 
+    MonoArray, MonoAssembly, MonoClass, 
+    MonoMethod, MonoObject, MonoString, 
+    MonoType, VoidPtr 
 } from "./types";
 import { Module } from "./modules";
 
@@ -57,6 +57,7 @@ const fn_signatures: [ident: string, returnType: string | null, argTypes?: strin
     ["mono_wasm_type_get_class", "number", ["number"]],
     ["mono_wasm_get_type_name", "string", ["number"]],
     ["mono_wasm_get_type_aqn", "string", ["number"]],
+    ["mono_wasm_get_class_for_bind_or_invoke", "number", ["number", "number"]],
     ["mono_wasm_unbox_rooted", "number", ["number"]],
 
     //DOTNET
@@ -117,11 +118,12 @@ export interface t_Cwraps {
     mono_wasm_type_get_class(ty: MonoType): MonoClass;
     mono_wasm_get_type_name(ty: MonoType): string;
     mono_wasm_get_type_aqn(ty: MonoType): string;
+    mono_wasm_get_class_for_bind_or_invoke(this_arg: MonoObject, method: MonoMethod): MonoClass;
     mono_wasm_unbox_rooted(obj: MonoObject): VoidPtr;
 
     //DOTNET
     mono_wasm_string_from_js(str: string): MonoString;
-
+    
     //INTERNAL
     mono_wasm_exit(exit_code: number): number;
     mono_wasm_enable_on_demand_gc(enable: number): void;

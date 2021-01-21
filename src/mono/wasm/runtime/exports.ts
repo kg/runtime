@@ -28,7 +28,8 @@ import {
     mono_wasm_load_data_archive, mono_wasm_asm_loaded,
     mono_wasm_set_main_args,
     mono_wasm_pre_init,
-    mono_wasm_on_runtime_initialized
+    mono_wasm_on_runtime_initialized,
+    mono_wasm_register_custom_marshaler
 } from "./startup";
 import { mono_set_timeout, schedule_background_exec } from "./scheduling";
 import { mono_wasm_load_icu_data, mono_wasm_get_icudt_name } from "./icu";
@@ -46,8 +47,8 @@ import {
     mono_wasm_invoke_js,
     mono_wasm_invoke_js_blazor,
     mono_wasm_invoke_js_with_args, mono_wasm_set_by_index, mono_wasm_set_object_property,
-    _get_args_root_buffer_for_method_call, _get_buffer_for_method_call,
-    _handle_exception_for_call, _teardown_after_call
+    _teardown_after_call, _get_args_root_buffer_for_method_call,
+    _get_buffer_for_method_call, _handle_exception_for_call
 } from "./method-calls";
 import { mono_wasm_typed_array_copy_to, mono_wasm_typed_array_from, mono_wasm_typed_array_copy_from, mono_wasm_load_bytes_into_heap } from "./buffers";
 import { mono_wasm_cancel_promise } from "./cancelable-promise";
@@ -75,6 +76,8 @@ export const MONO: MONO = <any>{
     mono_wasm_new_root_buffer,
     mono_wasm_new_root,
     mono_wasm_release_roots,
+
+    mono_wasm_register_custom_marshaler,
 
     // for Blazor's future!
     mono_wasm_add_assembly: cwraps.mono_wasm_add_assembly,
@@ -297,6 +300,8 @@ export interface MONO {
     mono_wasm_add_assembly: typeof cwraps.mono_wasm_add_assembly,
     mono_wasm_load_runtime: typeof cwraps.mono_wasm_load_runtime,
 
+    mono_wasm_register_custom_marshaler: typeof mono_wasm_register_custom_marshaler;
+    
     loaded_files: string[];
     config: MonoConfig | MonoConfigError,
 }
