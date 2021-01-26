@@ -70,6 +70,7 @@ var BindingSupportLib = {
 			this.mono_wasm_intern_string = Module.cwrap ('mono_wasm_intern_string', 'number', ['number']);
 			this.assembly_get_entry_point = Module.cwrap ('mono_wasm_assembly_get_entry_point', 'number', ['number']);
 			this.mono_wasm_get_delegate_invoke = Module.cwrap ('mono_wasm_get_delegate_invoke', 'number', ['number']);
+			this.mono_wasm_create_method_signature_info = Module.cwrap ('mono_wasm_create_method_signature_info', 'number', ['number']);
 
 			this._box_buffer = Module._malloc(16);
 			this._unbox_buffer = Module._malloc(16);
@@ -927,7 +928,21 @@ var BindingSupportLib = {
 			return result;
 		},
 
+		get_method_signature_info: function (methodPtr) {
+			if (!this._method_signature_info_table)
+				this._method_signature_info_table = new Map ();
+			var result = this._method_signature_info_table.get (methodPtr);
+			if (!result) {
+				result = this.mono_wasm_create_method_signature_info (methodPtr);
+				this._method_signature_info_table.set (methodPtr, result);
+				console.log ("signature info for ptr", methodPtr, "is", result);
+			}
+			return result;
+		},
+
 		_create_converter_for_marshal_string: function (method, args_marshal) {
+			var sigInfo = this.get_method_signature_info(method);
+
 			var primitiveConverters = this._primitive_converters;
 			if (!primitiveConverters)
 				primitiveConverters = this._create_primitive_converters ();
