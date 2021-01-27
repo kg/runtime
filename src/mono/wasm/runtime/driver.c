@@ -1206,3 +1206,11 @@ mono_wasm_create_method_signature_info (MonoMethod *method)
 
 	return result;
 }
+
+EMSCRIPTEN_KEEPALIVE void *
+mono_wasm_unbox_rooted (MonoObject *obj)
+{
+	if (!obj)
+		return 0;
+	return mono_object_unbox (obj);
+}
