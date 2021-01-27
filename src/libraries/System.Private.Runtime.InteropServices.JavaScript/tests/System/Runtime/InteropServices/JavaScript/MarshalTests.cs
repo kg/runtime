@@ -881,7 +881,8 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
 
-/*
+        // FIXME
+        /*
         [Fact]
         public static void MarshalDateTimeByValueAutomatic()
         {
@@ -892,7 +893,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             );
             Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
-*/
+        */
 
         [Fact]
         public static void MarshalUri()
@@ -924,6 +925,17 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
                 @"App.call_test_method ('InvokeCustomStruct', [ 4.13 ], 'a');"
             );
             Assert.Equal(4.13, HelperMarshal._csValue.D);
+        }
+
+        [Fact]
+        public static void MarshalCustomDateAutomatic()
+        {
+            HelperMarshal._dateTimeValue = default(DateTime);
+            Runtime.InvokeJS(
+                $"var dt = new Date('{ExpectedDateString}');\r\n" +
+                @"App.call_test_method ('InvokeCustomDate', [ dt ], 'a');"
+            );
+            Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
     }
 }
