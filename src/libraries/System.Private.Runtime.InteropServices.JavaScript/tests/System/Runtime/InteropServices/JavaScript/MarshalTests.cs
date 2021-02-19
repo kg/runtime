@@ -881,9 +881,10 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
 
-        // FIXME
         /*
-        [Fact]
+
+        // FIXME
+        // [Fact]
         public static void MarshalDateTimeByValueAutomatic()
         {
             HelperMarshal._dateTimeValue = default(DateTime);
@@ -893,7 +894,6 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             );
             Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
-        */
 
         [Fact]
         public static void MarshalUri()
@@ -971,5 +971,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             );
             Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
+
+        */
     }
 }
