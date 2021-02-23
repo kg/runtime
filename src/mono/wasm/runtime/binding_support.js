@@ -997,8 +997,6 @@ var BindingSupportLib = {
 			if (!this.make_marshal_signature_info)
 				return null;
 
-			if (!classPtr)
-				throw new Error("Class ptr not provided");
 			if (!methodPtr)
 				throw new Error("Method ptr not provided");
 				
@@ -1010,8 +1008,10 @@ var BindingSupportLib = {
 				const bufferSize = 1024;
 				var infoPtr = Module._malloc(bufferSize);
 				MONO._zero_region(infoPtr, bufferSize);
-				var typePtr = this.mono_wasm_class_get_type (classPtr)
-				console.log(`Calling MakeMarshalSignatureInfo for classPtr ${classPtr}, typePtr ${typePtr} and methodPtr ${methodPtr}, at offset ${infoPtr}`);
+				var typePtr = classPtr 
+					? this.mono_wasm_class_get_type (classPtr) 
+					: 0;
+				// console.log(`Calling MakeMarshalSignatureInfo for classPtr ${classPtr}, typePtr ${typePtr} and methodPtr ${methodPtr}, at offset ${infoPtr}`);
 				var err = this.make_marshal_signature_info (typePtr, methodPtr, infoPtr, bufferSize);
 				if (err !== 0)
 					throw new Error (`MakeMarshalSignatureInfo failed with code ${err}`);
@@ -1019,8 +1019,8 @@ var BindingSupportLib = {
 				var off32 = (infoPtr / 4) | 0;
 				var pcount = Module.HEAPU32[off32 + 0];
 
-				console.log(`MakeMarshalSignatureInfo produced ${pcount} parameter(s)`);
-				pcount = Math.min(63, pcount);
+				if (pcount > 512)
+					throw new Error (`MakeMarshalSignatureInfo produced ${pcount} parameters, almost certainly wrong`);
 
 				var decode = function (offset32) {
 					return {
@@ -1040,8 +1040,6 @@ var BindingSupportLib = {
 					"classPtr": classPtr,
 					"methodPtr": methodPtr
 				};
-
-				console.log(JSON.stringify(result));
 
 				Module._free (infoPtr);
 				if (classMismatch)
@@ -1214,6 +1212,12 @@ var BindingSupportLib = {
 				// console.log ("preFilter", preFilter);
 
 				var convMethod = this.find_method (classPtr, "JSToManaged", 1);
+				if (!convMethod) {
+					console.log (`No automatic converter found for classPtr ${classPtr} and methodPtr ${methodPtr}`);
+					this._automatic_converter_table.set (classPtr, null);
+					return null;
+				}
+
 				// FIXME
 				var sigInfo = this.get_method_signature_info (classPtr, convMethod);
 				// Return unboxed so it can go directly into the arguments list
