@@ -1315,6 +1315,14 @@ mono_wasm_create_method_signature_info (MonoClass *klass, MonoMethod *method)
 	return result;
 }
 
+EMSCRIPTEN_KEEPALIVE MonoType *
+mono_wasm_class_get_type (MonoClass *klass)
+{
+	if (!klass)
+		return 0;
+	return mono_class_get_type (klass);
+}
+
 EMSCRIPTEN_KEEPALIVE void *
 mono_wasm_unbox_rooted (MonoObject *obj)
 {
