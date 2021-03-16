@@ -454,7 +454,7 @@ var BindingSupportLib = {
 				case 18:
 					throw new Error ("Marshalling of primitive arrays are not supported.  Use the corresponding TypedArray instead.");
 				case 20: // clr .NET DateTime
-					var dateValue = this.call_method(this.get_date_value, null, "md", [ mono_obj ]);
+					var dateValue = this.call_method(this.get_date_value, null, "m", [ mono_obj ]);
 					return new Date(dateValue);
 				case 21: // clr .NET DateTimeOffset
 					var dateoffsetValue = this._object_to_string (mono_obj);
@@ -1053,9 +1053,9 @@ var BindingSupportLib = {
 			};
 			var body = [
 				"var value = boundConverter (js_value), filteredValue = null;",
-				// "console.log(`value === ${value}`);",
+				"console.log(`value === ${value}`);",
 				`{ filteredValue = ${js}; }`,
-				// "console.log(`filteredValue === ${filteredValue}`);",
+				"console.log(`filteredValue === ${filteredValue}`);",
 				"return filteredValue;"
 			];
 			
@@ -1151,6 +1151,8 @@ var BindingSupportLib = {
 			var objSize = Module.HEAP32[(unbox_buffer / 4) | 0];
 			var classPtr = Module.HEAP32[((unbox_buffer / 4) | 0) + 1];
 			var dataOffset = unbox_buffer + 8;
+			if (!classPtr)
+				throw new Error("classPtr is null or undefined");
 
 			// console.log (`objSize ${objSize} classPtr ${classPtr} dataOffset ${dataOffset}`);
 
@@ -1160,12 +1162,14 @@ var BindingSupportLib = {
 			if (!this._struct_unboxer_cache.has (classPtr)) {
 				var info = this._get_custom_marshaler_info_for_class (classPtr);
 				// HACK
-				if (!info)
+				if (!info) {
+					console.log("_get_custom_marshaler_info returned null for classPtr", classPtr);
 					info = {};
+				}
 
 				var postFilter = info.postFilter;
 
-				// console.log ("postFilter", postFilter);
+				console.log ("postFilter", postFilter);
 
 				var convMethod = info.outputPtr;
 				if (!convMethod)
@@ -1202,11 +1206,11 @@ var BindingSupportLib = {
 			};
 			var body = [
 				"var filteredValue = null;",
-				// "console.log(`preFilter(${value})`);",
+				"console.log(`preFilter(${value})`);",
 				`{ filteredValue = ${js}; }`,
-				// "console.log(`preFilter === ${filteredValue}`);",
+				"console.log(`preFilter === ${filteredValue}`);",
 				"var convertedResult = boundConverter (filteredValue, method, parmIdx);",
-				// "console.log(`convertedResult === ${convertedResult}`);",
+				"console.log(`convertedResult === ${convertedResult}`);",
 				"return convertedResult;"
 			];
 			
@@ -1221,13 +1225,19 @@ var BindingSupportLib = {
 		},
 
 		_pick_automatic_converter_for_user_type: function (methodPtr, args_marshal, classPtr) {
+			if (!classPtr)
+				throw new Error("classPtr is null or undefined");
+
 			if (!this._automatic_converter_table)
 				this._automatic_converter_table = new Map ();
 			if (!this._automatic_converter_table.has (classPtr)) {
+					
 				var info = this._get_custom_marshaler_info_for_class (classPtr);
 				// HACK
-				if (!info)
+				if (!info) {
+					console.log("_get_custom_marshaler_info returned null for classPtr", classPtr);
 					info = {};
+				}
 
 				var preFilter = info.preFilter;
 
@@ -1269,18 +1279,10 @@ var BindingSupportLib = {
 
 			switch (paramRecord.marshalType) {
 				case 4: // Struct
-					var info = this._get_custom_marshaler_info_for_type (paramRecord.typePtr);
-					if (info && !info.outputNeedsToBeUnboxed) {
-						result.needs_unbox = false;
-						// While the output of the marshaler is not a valuetype, it may be
-						//  an object that needs to be converted, like a string.
-						result.convert = this.js_to_mono_obj.bind(this);
-					} else {
-						result.needs_unbox = true;
-					}
+					result.needs_unbox = true;
 					; // FIXME: Fall-through
 				case 7: // OBJECT
-					var res = this._pick_automatic_converter_for_user_type (methodPtr, args_marshal, paramRecord.class);
+					var res = this._pick_automatic_converter_for_user_type (methodPtr, args_marshal, paramRecord.classPtr);
 					if (res) {
 						result.convert = res;
 						break;
@@ -1293,7 +1295,6 @@ var BindingSupportLib = {
 					break;
 			}
 
-			console.log(JSON.stringify(result));
 			return result;
 		},
 
@@ -1446,7 +1447,8 @@ var BindingSupportLib = {
 				//  pass the raw address of its boxed value into the callee.
 				if (step.needs_unbox) {
 					closure.mono_wasm_unbox_rooted = this.mono_wasm_unbox_rooted;
-					body.push (`console.log('unboxing', ${valueKey}); ${valueKey} = mono_wasm_unbox_rooted (${valueKey}); console.log('unboxed ok and got', ${valueKey});`);
+					closure.unbox_mono_obj = this.unbox_mono_obj.bind(this);
+					body.push (`console.log('unboxing', ${valueKey}); ${valueKey} = unbox_mono_obj (${valueKey}); console.log('unboxed ok and got', ${valueKey});`);
 				}
 
 				if (step.indirect) {
@@ -1673,24 +1675,29 @@ var BindingSupportLib = {
 			var buffer = 0, converter = null, argsRootBuffer = null;
 			var is_result_marshaled = true;
 
-			// check if the method signature needs argument mashalling
-			if (needs_converter) {
-				var classPtr = this.mono_wasm_get_class_for_bind_or_invoke (this_arg, method);
-				if (!classPtr)
-					throw new Error (`Could not get class ptr for call_method with this (${this_arg}) and method (${method})`);
+			try {
+				// check if the method signature needs argument mashalling
+				if (needs_converter) {
+					var classPtr = this.mono_wasm_get_class_for_bind_or_invoke (this_arg, method);
+					if (!classPtr)
+						throw new Error (`Could not get class ptr for call_method with this (${this_arg}) and method (${method})`);
 
-				converter = this._compile_converter_for_marshal_string (classPtr, method, args_marshal);
+					converter = this._compile_converter_for_marshal_string (classPtr, method, args_marshal);
 
-				is_result_marshaled = this._decide_if_result_is_marshaled (converter, args.length);
+					is_result_marshaled = this._decide_if_result_is_marshaled (converter, args.length);
 
-				argsRootBuffer = this._get_args_root_buffer_for_method_call (converter);
+					argsRootBuffer = this._get_args_root_buffer_for_method_call (converter);
 
-				var scratchBuffer = this._get_buffer_for_method_call (converter);
+					var scratchBuffer = this._get_buffer_for_method_call (converter);
 
-				buffer = converter.compiled_variadic_function (scratchBuffer, argsRootBuffer, method, args);
+					buffer = converter.compiled_variadic_function (scratchBuffer, argsRootBuffer, method, args);
+				}
+
+				return this._call_method_with_converted_args (method, this_arg, converter, buffer, is_result_marshaled, argsRootBuffer);
+			} catch (exc) {
+				console.log("while calling method", this._method_descriptions.get(method) || method);
+				throw exc;
 			}
-
-			return this._call_method_with_converted_args (method, this_arg, converter, buffer, is_result_marshaled, argsRootBuffer);
 		},
 
 		_handle_exception_for_call: function (
