@@ -1229,114 +1229,6 @@ mono_wasm_intern_string (MonoString *string)
 	return mono_string_intern (string);
 }
 
-typedef struct wasm_method_signature_info {
-	int result_marshal_type;
-	MonoClass* result_class;
-	int parameter_count;
-	int* parameter_marshal_types;
-	MonoClass** parameter_classes;
-} wasm_method_signature_info;
-
-void build_signature_info_record (MonoType *type, int* resultMtype, MonoClass** resultClass) {
-	if (!type) {
-		*resultMtype = 0;
-		*resultClass = 0;
-		return;
-	}
-
-	int mono_type = mono_type_get_type (type);
-	MonoClass * klass = mono_type_get_class (type);
-	if (!klass) {
-		*resultMtype = 0;
-		*resultClass = 0;
-		return;
-	}
-	*resultMtype = mono_wasm_marshal_type_from_mono_type (mono_type, klass, type);
-	*resultClass = klass;
-
-	/*
-	const char * tname = mono_type_get_name (type);
-	EM_ASM({
-		var mtype = $0;
-		var type = $1;
-		var tname = Module.UTF8ToString ($2);
-		var klass = $3;
-		var mono_type = $4;
-		console.log (mtype, type, tname, klass, mono_type);
-	}, *resultMtype, *resultType, tname, klass, mono_type);
-	*/
-}
-
-// FIXME
-MONO_API MonoGenericContext*
-mono_class_get_context (MonoClass *klass);
-
-// FIXME
-MONO_API MonoMethodSignature *
-mono_metadata_get_inflated_signature (MonoMethodSignature *sig, MonoGenericContext *context);
-
-EMSCRIPTEN_KEEPALIVE wasm_method_signature_info * 
-mono_wasm_create_method_signature_info (MonoClass *klass, MonoMethod *method) 
-{
-	// FIXME: The recent changes on master completely broke this
-	return 0;
-
-	if (!method)
-		return 0;
-
-	MonoMethodSignature *raw_sig = mono_method_signature (method);
-	if (!raw_sig)
-		return 0;
-
-	MonoGenericContext *generic_ctx = mono_class_get_context (klass), *sig;
-	if (!generic_ctx) {
-		sig = raw_sig;
-	} else {
-		sig = mono_metadata_get_inflated_signature (raw_sig, generic_ctx);
-	}
-	if (!sig)
-		return 0;
-
-	int parameter_count = mono_signature_get_param_count (sig);
-	int allocation_size = sizeof(wasm_method_signature_info) /* + 
-		(parameter_count * sizeof(int)) +
-		(parameter_count * sizeof(MonoClass *)) */ +
-		12;
-
-	wasm_method_signature_info *result = malloc (allocation_size);
-	memset (result, 0, allocation_size);
-
-	result->parameter_count = parameter_count;
-	result->parameter_marshal_types = malloc(sizeof(int) * (parameter_count + 1));
-	memset(result->parameter_marshal_types, 0, parameter_count * sizeof(int));
-	
-	// (((char *)result) + sizeof(wasm_method_signature_info) + 4);
-	result->parameter_classes = malloc(sizeof (MonoClass *) * (parameter_count + 1));
-	memset(result->parameter_classes, 0, parameter_count * sizeof(MonoClass *));
-	
-	// ((char *)result->parameter_marshal_types) + (sizeof(int) * parameter_count) + 4;
-
-	EM_ASM({
-		console.debug("creating signature info for method result", Module.UTF8ToString ($0));
-	}, mono_method_get_full_name (method));
-
-	build_signature_info_record (mono_signature_get_return_type (sig), &result->result_marshal_type, &result->result_class);
-
-	EM_ASM({
-		console.debug("creating signature info for method params", Module.UTF8ToString ($0));
-	}, mono_method_get_full_name (method));
-
-	int i = 0;
-	void *iter = 0;
-	MonoType *p = 0;
-	while ((p = mono_signature_get_params (sig, &iter)) != 0) {
-		build_signature_info_record (p, &(result->parameter_marshal_types[i]), &(result->parameter_classes[i]));
-		i++;
-	}
-
-	return result;
-}
-
 EMSCRIPTEN_KEEPALIVE MonoType *
 mono_wasm_class_get_type (MonoClass *klass)
 {
@@ -1350,6 +1242,11 @@ mono_wasm_unbox_rooted (MonoObject *obj)
 {
 	if (!obj)
 		return 0;
+	MonoClass * klass = mono_object_get_class(obj);
+	char * type_name = mono_type_get_name_full (mono_class_get_type(klass), MONO_TYPE_NAME_FORMAT_REFLECTION);
+	EM_ASM({
+		console.log("mono_wasm_unbox_rooted", Module.UTF8ToString($0));
+	}, type_name);
 	return mono_object_unbox (obj);
 }
 
@@ -1361,4 +1258,9 @@ mono_wasm_get_class_for_bind_or_invoke (MonoObject *this_arg, MonoMethod *method
 		return mono_method_get_class (method);
 	else
 		return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE char * 
+mono_wasm_get_type_name (MonoType * typePtr) {
+	return mono_type_get_name_full (typePtr, MONO_TYPE_NAME_FORMAT_REFLECTION);
 }
