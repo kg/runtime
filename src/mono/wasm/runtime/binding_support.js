@@ -1170,7 +1170,7 @@ var BindingSupportLib = {
 
 				var postFilter = info.postFilter;
 
-				console.log ("postFilter", postFilter);
+				// console.log ("postFilter", postFilter);
 
 				var convMethod = info.outputPtr;
 				if (!convMethod)
