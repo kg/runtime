@@ -1362,6 +1362,80 @@ mono_wasm_get_type_name (MonoType * typePtr) {
 	return mono_type_get_name_full (typePtr, MONO_TYPE_NAME_FORMAT_REFLECTION);
 }
 
+#define INVOKERESULT_Success 0
+#define INVOKERESULT_InvalidFunctionName 1 // null/blank name, name not interned, or syntax errror
+#define INVOKERESULT_FunctionNotFound 2 // no function found matching this function name
+#define INVOKERESULT_InvalidArgumentCount 3 // argument count outside valid range [0-3]
+#define INVOKERESULT_InvalidArgumentType 4 // an argument was of an unsupported type
+#define INVOKERESULT_MissingArgumentType 5 // an argument value was provided without a type handle
+#define INVOKERESULT_NullArgumentPointer 6 // the pointer to a non-nullable argument value was 0
+#define INVOKERESULT_InternalError 7 // an unspecified internal error occurred
+
+extern uint32_t mono_wasm_invoke_js_function_by_qualified_name_impl (
+	mono_unichar2 *internedFunctionName, int internedFunctionNameLength, uint32_t argumentCount,
+	int** marshalTypes, MonoType **typeHandles, MonoObject **arguments
+);
+
+static uint32_t
+mono_wasm_invoke_js_function_by_qualified_name (
+	MonoString *internedFunctionName, uint32_t argumentCount,
+	MonoType *type1, MonoObject *arg1,
+	MonoType *type2, MonoObject *arg2,
+	MonoType *type3, MonoObject *arg3
+) {
+	MonoString *pString = mono_string_is_interned (internedFunctionName);
+	if (!internedFunctionName || pString != internedFunctionName)
+		return INVOKERESULT_InvalidFunctionName;
+
+	if (argumentCount > 3)
+		return INVOKERESULT_InvalidArgumentCount;
+
+	mono_unichar2 *native_val = mono_string_chars (pString);
+	int native_len = mono_string_length (pString) * 2;
+	if (native_len < 1)
+		return INVOKERESULT_InvalidFunctionName;
+	
+	int **marshalTypes = g_new0 (int *, argumentCount);
+	MonoType **typeHandles = g_new0 (MonoType *, argumentCount);
+	MonoObject **arguments = g_new0 (MonoObject *, argumentCount);
+
+	if (argumentCount > 0) {
+		typeHandles[0] = type1;
+		arguments[0] = arg1;
+	}
+	if (argumentCount > 1) {
+		typeHandles[1] = type2;
+		arguments[1] = arg2;
+	}
+	if (argumentCount > 2) {
+		typeHandles[2] = type3;
+		arguments[2] = arg3;
+	}
+
+	uint32_t result = 0;
+	MonoClass *klass;
+	int mono_type;
+
+	for (uint32_t i = 0; i < argumentCount; i++) {
+		klass = mono_class_from_mono_type (typeHandles[i]);
+		mono_type = mono_type_get_type (typeHandles[i]);
+		marshalTypes[i] = mono_wasm_marshal_type_from_mono_type (mono_type, klass, typeHandles[i]);
+		if (marshalTypes[i] >= MARSHAL_ERROR_BUFFER_TOO_SMALL) {
+			result = INVOKERESULT_InvalidArgumentType;
+		}
+	}
+	
+	if (result == 0) {
+		result = mono_wasm_invoke_js_function_by_qualified_name_impl (
+			native_val, native_len, argumentCount,
+			marshalTypes, typeHandles, arguments
+		);
+	}
+
+	free(marshalTypes);
+	free(typeHandles);
+	free(arguments);
+}
 EMSCRIPTEN_KEEPALIVE char * 
 mono_wasm_get_type_aqn (MonoType * typePtr) {
 	return mono_type_get_name_full (typePtr, MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED);
