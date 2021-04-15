@@ -1417,12 +1417,20 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	int mono_type;
 
 	for (uint32_t i = 0; i < argumentCount; i++) {
+		if (typeHandles[i] == 0) {
+			result = INVOKERESULT_MissingArgumentType;
+			break;
+		}
+
 		klass = mono_class_from_mono_type (typeHandles[i]);
 		mono_type = mono_type_get_type (typeHandles[i]);
 		marshalTypes[i] = mono_wasm_marshal_type_from_mono_type (mono_type, klass, typeHandles[i]);
 		if (marshalTypes[i] >= MARSHAL_ERROR_BUFFER_TOO_SMALL) {
 			result = INVOKERESULT_InvalidArgumentType;
+			break;
 		}
+
+		// TODO: INVOKERESULT_NullArgumentPointer
 	}
 	
 	if (result == 0) {
@@ -1435,7 +1443,10 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	free(marshalTypes);
 	free(typeHandles);
 	free(arguments);
+
+	return result;
 }
+
 EMSCRIPTEN_KEEPALIVE char * 
 mono_wasm_get_type_aqn (MonoType * typePtr) {
 	return mono_type_get_name_full (typePtr, MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED);
