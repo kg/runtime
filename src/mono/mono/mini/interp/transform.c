@@ -215,6 +215,35 @@ static gboolean generate_code (TransformData *td, MonoMethod *method, MonoMethod
 	ins->sregs [2] = s3; \
 } while (0)
 
+static int32_t canary_size = 128;
+static uint8_t canary_fill_1 = 0xAC, canary_fill_2 = 0xCA;
+
+static void * malloc_with_canary (int32_t size) {
+	g_assert (size > 0);
+	g_assert (size < (1024 * 512));
+	int32_t padded_size = size + (canary_size * 2) + sizeof(int32_t);
+	void * actual_alloc = malloc(padded_size);
+	*((int32_t*)actual_alloc) = size;
+	void * head = ((uint8_t*)actual_alloc) + sizeof(int32_t);
+	memset(head, canary_fill_1, canary_size);
+	void * result = ((uint8_t*)head) + canary_size;
+	void * tail = ((uint8_t*)result) + size;
+	memset(tail, canary_fill_2, canary_size);
+	return result;
+}
+
+static void free_with_canary (void * buffer) {
+	void * actual_alloc = ((uint8_t)buffer) - canary_size - sizeof(int32_t);
+	int32_t actual_size = *((int32_t*)actual_alloc);
+	uint8_t *head = ((uint8_t*)actual_alloc) + sizeof(int32_t);
+	uint8_t *tail = ((uint8_t*)buffer) + actual_size;
+	for (int32_t i = 0; i < canary_size; i++) {
+		g_assert(head[i] == canary_fill_1);
+		g_assert(tail[i] == canary_fill_2);
+	}
+	free(actual_alloc);
+}
+
 static InterpInst*
 interp_new_ins (TransformData *td, guint16 opcode, int len)
 {
@@ -2817,10 +2846,10 @@ interp_inline_method (TransformData *td, MonoMethod *target_method, MonoMethodHe
 
 	prev_n_data_items = td->n_data_items;
 	prev_in_offsets = td->in_offsets;
-	td->in_offsets = (int*)g_malloc0((header->code_size + 1) * sizeof(int));
+	td->in_offsets = (int*)malloc_with_canary((header->code_size + 1) * sizeof(int));
 
 	/* Inlining pops the arguments, restore the stack */
-	prev_param_area = (StackInfo*)g_malloc (nargs * sizeof (StackInfo));
+	prev_param_area = (StackInfo*)malloc_with_canary (nargs * sizeof (StackInfo));
 	memcpy (prev_param_area, &td->sp [-nargs], nargs * sizeof (StackInfo));
 
 	int const prev_code_size = td->code_size;
@@ -2872,10 +2901,10 @@ interp_inline_method (TransformData *td, MonoMethod *target_method, MonoMethodHe
 	td->entry_bb = prev_entry_bb;
 	td->aggressive_inlining = prev_aggressive_inlining;
 
-	g_free (td->in_offsets);
+	free_with_canary (td->in_offsets);
 	td->in_offsets = prev_in_offsets;
 
-	g_free (prev_param_area);
+	free_with_canary (prev_param_area);
 	return ret;
 }
 
@@ -4435,7 +4464,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 #endif
 	} else {
 		int local;
-		arg_locals = (guint32*) g_malloc ((!!signature->hasthis + signature->param_count) * sizeof (guint32));
+		arg_locals = (guint32*) malloc_with_canary ((!!signature->hasthis + signature->param_count) * sizeof (guint32));
 		/* Allocate locals to store inlined method args from stack */
 		for (i = signature->param_count - 1; i >= 0; i--) {
 			local = create_interp_local (td, signature->params [i]);
@@ -4458,7 +4487,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			store_local (td, local);
 		}
 
-		local_locals = (guint32*) g_malloc (header->num_locals * sizeof (guint32));
+		local_locals = (guint32*) malloc_with_canary (header->num_locals * sizeof (guint32));
 		/* Allocate locals to store inlined method args from stack */
 		for (i = 0; i < header->num_locals; i++)
 			local_locals [i] = create_interp_local (td, header->locals [i]);
@@ -7452,8 +7481,8 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 	}
 
 exit_ret:
-	g_free (arg_locals);
-	g_free (local_locals);
+	free_with_canary (arg_locals);
+	free_with_canary (local_locals);
 	mono_basic_block_free (original_bb);
 	td->dont_inline = g_list_remove (td->dont_inline, method);
 
