@@ -219,7 +219,7 @@ static int32_t canary_size = 128;
 static uint8_t canary_fill_1 = 0xAC, canary_fill_2 = 0xCA;
 
 static void * malloc_with_canary (int32_t size) {
-	g_assert (size > 0);
+	// g_assert (size > 0);
 	g_assert (size < (1024 * 512));
 	int32_t padded_size = size + (canary_size * 2) + (sizeof(int32_t) * 2);
 	uint8_t * actual_alloc = malloc(padded_size);
@@ -240,7 +240,7 @@ static void free_with_canary (void * buffer) {
 	int32_t actual_size = ((int32_t*)actual_alloc)[0];
 	int32_t actual_size_2 = ((int32_t*)actual_alloc)[1];
 	g_assert (actual_size == actual_size_2);
-	g_assert (actual_size > 0);
+	// g_assert (actual_size > 0);
 	g_assert (actual_size < (1024 * 512));
 	uint8_t *head = actual_alloc + (sizeof(int32_t) * 2);
 	uint8_t *tail = ((uint8_t*)buffer) + actual_size;
