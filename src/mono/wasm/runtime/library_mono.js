@@ -318,6 +318,7 @@ var MonoSupportLib = {
 				});
 			}
 
+			// TODO: Grow buffer or allocate a new one
 			if (this._scratch_root_free_indices_count < 1)
 				throw new Error ("Out of scratch root space");
 
