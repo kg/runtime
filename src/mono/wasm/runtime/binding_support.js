@@ -515,6 +515,7 @@ var BindingSupportLib = {
 				case 1: // int
 					return Module.HEAP32[this._unbox_buffer / 4];
 				case 4: // struct
+					// FIXME: broken on re-entrant marshaling!!!!!!!
 					return this._unbox_struct_rooted (this._unbox_buffer, mono_obj);
 				case 25: // uint32
 					return Module.HEAPU32[this._unbox_buffer / 4];
@@ -1819,12 +1820,14 @@ var BindingSupportLib = {
 			this._release_buffer_from_method_call (converter, token, buffer | 0);
 
 			if (resultRoot) {
+				resultRoot.value = 0;
 				if ((token !== null) && (token.scratchResultRoot == null))
 					token.scratchResultRoot = resultRoot;
 				else
 					resultRoot.release ();
 			}
 			if (exceptionRoot) {
+				exceptionRoot.value = 0;
 				if ((token !== null) && (token.scratchExceptionRoot == null))
 					token.scratchExceptionRoot = exceptionRoot;
 				else
@@ -1988,6 +1991,7 @@ var BindingSupportLib = {
 					"    case 1:", // int
 					"        result = Module.HEAP32[unbox_buffer / 4]; break;",
 					"    case 4:", // struct
+					// FIXME: broken on re-entrant marshaling!!!!!!!
 					"        result = binding_support._unbox_struct_rooted (unbox_buffer, resultPtr); break;",
 					"    case 25:", // uint32
 					"        result = Module.HEAPU32[unbox_buffer / 4]; break;",
