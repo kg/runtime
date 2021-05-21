@@ -1540,6 +1540,7 @@ var MonoSupportLib = {
 			cmt["System.Uri"] = "System.Runtime.InteropServices.JavaScript.UriMarshaler";
 			cmt["System.DateTime"] = "System.Runtime.InteropServices.JavaScript.DateTimeMarshaler";
 			cmt["System.DateTimeOffset"] = "System.Runtime.InteropServices.JavaScript.DateTimeOffsetMarshaler";
+			cmt["Sample.CustomClass"] = "Sample.CustomClassMarshaler";
 		},
 
 		_get_fetch_file_cb_from_args: function (args) {
