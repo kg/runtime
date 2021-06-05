@@ -820,6 +820,7 @@ MonoClass* mono_get_uri_class(MonoException** exc)
 #define MARSHAL_TYPE_CHAR 28
 #define MARSHAL_TYPE_STRING_INTERNED 29
 #define MARSHAL_TYPE_VOID 30
+#define MARSHAL_TYPE_POINTER 32
 
 // errors
 #define MARSHAL_ERROR_BUFFER_TOO_SMALL 512
@@ -852,6 +853,8 @@ mono_wasm_marshal_type_from_mono_type (int mono_type, MonoClass *klass, MonoType
 		return MARSHAL_TYPE_VOID;
 	case MONO_TYPE_BOOLEAN:
 		return MARSHAL_TYPE_BOOL;
+	case MONO_TYPE_PTR:
+		return MARSHAL_TYPE_POINTER;
 	case MONO_TYPE_I1:
 	case MONO_TYPE_U1:
 	case MONO_TYPE_I2:
@@ -1042,6 +1045,9 @@ mono_wasm_try_unbox_primitive_and_get_type (MonoObject *obj, void *result, int r
 			break;
 		case MONO_TYPE_R8:
 			*resultD = *(double*)mono_object_unbox (obj);
+			break;
+		case MONO_TYPE_PTR:
+			*resultL = (int64_t)(*(void**)mono_object_unbox (obj));
 			break;
 		case MONO_TYPE_I8:
 		case MONO_TYPE_U8:
