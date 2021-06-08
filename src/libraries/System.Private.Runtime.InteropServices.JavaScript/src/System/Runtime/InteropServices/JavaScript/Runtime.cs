@@ -29,13 +29,17 @@ namespace System.Runtime.InteropServices.JavaScript
         // </summary>
         // <returns>The js.</returns>
         // <param name="str">String.</param>
-        public static string InvokeJS(string str)
+        public static string InvokeJS(string? str)
         {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
             return Interop.Runtime.InvokeJS(str);
         }
 
-        public static Function? CompileFunction(string snippet)
+        public static Function? CompileFunction(string? snippet)
         {
+            if (snippet == null)
+                throw new ArgumentNullException(nameof(snippet));
             return Interop.Runtime.CompileFunction(snippet);
         }
 
@@ -44,13 +48,17 @@ namespace System.Runtime.InteropServices.JavaScript
             return Interop.Runtime.New(typeof(T).Name, parms);
         }
 
-        public static int New(string hostClassName, params object[] parms)
+        public static int New(string? hostClassName, params object[] parms)
         {
+            if (hostClassName == null)
+                throw new ArgumentNullException(nameof(hostClassName));
             return Interop.Runtime.New(hostClassName, parms);
         }
 
-        public static void FreeObject(object obj)
+        public static void FreeObject(object? obj)
         {
+            if (obj == null)
+                throw new ArgumentNullException(nameof(obj));
             if (obj is Delegate)
             {
                 return;
@@ -142,8 +150,11 @@ namespace System.Runtime.InteropServices.JavaScript
                 _ => throw new ArgumentOutOfRangeException(nameof(coreType))
             };
 
-        internal static bool ReleaseJSObject(JSObject objToRelease)
+        internal static bool ReleaseJSObject(JSObject? objToRelease)
         {
+            if (objToRelease == null)
+                throw new ArgumentNullException(nameof(objToRelease));
+
             Interop.Runtime.ReleaseHandle(objToRelease.JSHandle, out int exception);
             if (exception != 0)
                 throw new JSException($"Error releasing handle on (js-obj js '{objToRelease.JSHandle}' mono '{objToRelease.Int32Handle} raw '{objToRelease.RawObject != null}' weak raw '{objToRelease.IsWeakWrapper}'   )");
@@ -174,23 +185,32 @@ namespace System.Runtime.InteropServices.JavaScript
             return new TaskCompletionSource<object>();
         }
 
-        public static void SetTaskSourceResult(TaskCompletionSource<object> tcs, object result)
+        public static void SetTaskSourceResult(TaskCompletionSource<object>? tcs, object result)
         {
+            if (tcs == null)
+                throw new ArgumentNullException(nameof(tcs));
             tcs.SetResult(result);
         }
 
-        public static void SetTaskSourceFailure(TaskCompletionSource<object> tcs, string reason)
+        public static void SetTaskSourceFailure(TaskCompletionSource<object>? tcs, string reason)
         {
+            if (tcs == null)
+                throw new ArgumentNullException(nameof(tcs));
             tcs.SetException(new JSException(reason));
         }
 
-        public static int GetTaskAndBind(TaskCompletionSource<object> tcs, int jsId)
+        public static int GetTaskAndBind(TaskCompletionSource<object>? tcs, int jsId)
         {
+            if (tcs == null)
+                throw new ArgumentNullException(nameof(tcs));
             return BindExistingObject(tcs.Task, jsId);
         }
 
-        public static int BindExistingObject(object rawObj, int jsId)
+        public static int BindExistingObject(object? rawObj, int jsId)
         {
+            if (rawObj == null)
+                throw new ArgumentNullException(nameof(rawObj));
+
             JSObject? jsObject;
             if (rawObj is Delegate dele)
             {
@@ -217,7 +237,7 @@ namespace System.Runtime.InteropServices.JavaScript
             return jsObject.Int32Handle;
         }
 
-        public static int GetJSObjectId(object rawObj)
+        public static int GetJSObjectId(object? rawObj)
         {
             JSObject? jsObject;
             if (rawObj is Delegate dele)
@@ -226,6 +246,9 @@ namespace System.Runtime.InteropServices.JavaScript
                 {
                     _weakDelegateTable.TryGetValue(dele, out jsObject);
                 }
+            }
+            else if (rawObj is null) {
+                return -1;
             }
             else
             {
@@ -245,7 +268,7 @@ namespace System.Runtime.InteropServices.JavaScript
                 js.GetWrappedObject() ?? h.Target : h.Target;
         }
 
-        public static bool IsSimpleArray(object a)
+        public static bool IsSimpleArray(object? a)
         {
             return a is System.Array arr && arr.Rank == 1 && arr.GetLowerBound(0) == 0;
         }
@@ -422,7 +445,7 @@ namespace System.Runtime.InteropServices.JavaScript
             Justification = "Trimming doesn't affect types eligible for marshalling. Different exception for invalid inputs doesn't matter.")]
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:UnrecognizedReflectionPattern",
             Justification = "Trimming doesn't affect types eligible for marshalling. Different exception for invalid inputs doesn't matter.")]
-        public static unsafe string GetCustomMarshalerInfoForType (IntPtr typePtr, string marshalerFullName) {
+        public static unsafe string GetCustomMarshalerInfoForType (IntPtr typePtr, string? marshalerFullName) {
             if (typePtr == IntPtr.Zero)
                 return "null";
             else if (string.IsNullOrEmpty(marshalerFullName))
@@ -466,7 +489,7 @@ namespace System.Runtime.InteropServices.JavaScript
                 "}");
         }
 
-        private static MarshalType GetMarshalTypeFromType (Type type) {
+        private static MarshalType GetMarshalTypeFromType (Type? type) {
             if (type == null)
                 return MarshalType.VOID;
             else if (type.IsPointer)
@@ -592,7 +615,7 @@ namespace System.Runtime.InteropServices.JavaScript
             }
         }
 
-        public static string GetCallSignature(IntPtr methodHandle, object objForRuntimeType)
+        public static string GetCallSignature(IntPtr methodHandle, object? objForRuntimeType)
         {
             IntPtrAndHandle tmp = default(IntPtrAndHandle);
             tmp.ptr = methodHandle;
@@ -621,7 +644,7 @@ namespace System.Runtime.InteropServices.JavaScript
             return new string(res);
         }
 
-        public static void SetupJSContinuation(Task task, JSObject continuationObj)
+        public static void SetupJSContinuation(Task? task, JSObject? continuationObj)
         {
             if (task == null)
                 throw new ArgumentNullException(nameof(task));
@@ -682,8 +705,11 @@ namespace System.Runtime.InteropServices.JavaScript
         /// </remarks>
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2070:UnrecognizedReflectionPattern",
             Justification = "Task<T>.Result is preserved by the ILLinker because _taskGetResultMethodInfo was initialized with it.")]
-        private static MethodInfo? GetTaskResultMethodInfo(Type taskType)
+        private static MethodInfo? GetTaskResultMethodInfo(Type? taskType)
         {
+            if (taskType == null)
+                throw new ArgumentNullException(nameof(taskType));
+
             MethodInfo? result = taskType.GetMethod(TaskGetResultName);
             if (result != null && result.HasSameMetadataDefinitionAs(_taskGetResultMethodInfo))
             {
@@ -693,9 +719,9 @@ namespace System.Runtime.InteropServices.JavaScript
             return null;
         }
 
-        public static string ObjectToString(object o)
+        public static string ObjectToString(object? o)
         {
-            return o.ToString() ?? string.Empty;
+            return o?.ToString() ?? string.Empty;
         }
 
         public static bool SafeHandleAddRef(SafeHandle safeHandle)
