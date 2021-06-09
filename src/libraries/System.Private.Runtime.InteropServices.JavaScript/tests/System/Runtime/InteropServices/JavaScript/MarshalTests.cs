@@ -1073,8 +1073,8 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         public static void InvokeByNameIntArgument()
         {
             HelperMarshal._intValue = 0;
-            Runtime.InvokeJS("globalThis._test_function_1arg = function (i) { App.call_test_method ('InvokeInt', [ i ], 'i') }");
-            var result = Runtime.InvokeJSFunctionByName("_test_function_1arg", 7);
+            Runtime.InvokeJS("globalThis._test_function_int = function (i) { App.call_test_method ('InvokeInt', [ i ], 'i') }");
+            var result = Runtime.InvokeJSFunctionByName("_test_function_int", 7);
             Assert.Equal(InvokeJSResult.Success, result);
             Assert.Equal(7, HelperMarshal._intValue);
         }
@@ -1110,6 +1110,27 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             var result = Runtime.InvokeJSFunctionByName("_test_function_uri", expected);
             Assert.Equal(InvokeJSResult.Success, result);
             Assert.Equal(expected, HelperMarshal._uriValue);
+        }
+
+        [Fact]
+        public static void InvokeByName3Arguments()
+        {
+            int a = 3;
+            DateTime b = ExpectedDateTime;
+            string c = "hello\0world";
+            HelperMarshal._intValue = 0;
+            HelperMarshal._dateTimeValue = default(DateTime);
+            HelperMarshal._stringResource = null;
+            Runtime.InvokeJS("globalThis._test_function_3arg = function (a, b, c) { " +
+                "App.call_test_method ('InvokeInt', [ a ], 'i'); " +
+                "App.call_test_method ('InvokeDateTime', [ b ], 'a'); " +
+                "App.call_test_method ('InvokeString', [ c], 's'); " +
+            "}");
+            var result = Runtime.InvokeJSFunctionByName("_test_function_3arg", a, b, c);
+            Assert.Equal(InvokeJSResult.Success, result);
+            Assert.Equal(a, HelperMarshal._intValue);
+            Assert.Equal(b, HelperMarshal._dateTimeValue);
+            Assert.Equal(c, HelperMarshal._stringResource);
         }
     }
 }

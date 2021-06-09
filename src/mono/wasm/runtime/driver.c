@@ -192,14 +192,16 @@ mono_wasm_invoke_js (MonoString *str, int *is_exception)
 #define INVOKERESULT_InvalidArgumentType 4 // an argument was of an unsupported type
 #define INVOKERESULT_MissingArgumentType 5 // an argument value was provided without a type handle
 #define INVOKERESULT_NullArgumentPointer 6 // the pointer to a non-nullable argument value was 0
-#define INVOKERESULT_InternalError 7 // an unspecified internal error occurred
+#define INVOKERESULT_FunctionHadReturnValue 7
+#define INVOKERESULT_FunctionThrewException 8
+#define INVOKERESULT_InternalError 9 // an unspecified internal error occurred
 
-static uint32_t
+static int32_t
 mono_wasm_invoke_js_function_by_qualified_name (
 	MonoString *internedFunctionName, uint32_t argumentCount,
-	MonoType *type1, MonoObject *arg1,
-	MonoType *type2, MonoObject *arg2,
-	MonoType *type3, MonoObject *arg3
+	MonoType *type1, void *arg1,
+	MonoType *type2, void *arg2,
+	MonoType *type3, void *arg3
 ) {
 	if (!internedFunctionName || !mono_string_instance_is_interned (internedFunctionName))
 		return INVOKERESULT_InvalidFunctionName;
@@ -209,12 +211,12 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	
 	int *marshalTypes = NULL;
 	MonoType **typeHandles = NULL;
-	MonoObject **arguments = NULL;
+	void **arguments = NULL;
 
 	if (argumentCount > 0) {
 		marshalTypes = g_new0 (int, argumentCount);
 		typeHandles = g_new0 (MonoType *, argumentCount);
-		arguments = g_new0 (MonoObject *, argumentCount);
+		arguments = g_new0 (void *, argumentCount);
 		typeHandles[0] = type1;
 		arguments[0] = arg1;
 	}
@@ -227,7 +229,7 @@ mono_wasm_invoke_js_function_by_qualified_name (
 		arguments[2] = arg3;
 	}
 
-	uint32_t result = 0;
+	int32_t result = 0;
 	MonoClass *klass;
 	int mono_type;
 
@@ -249,17 +251,15 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	}
 	
 	if (result == 0) {
-		// FIXME
+		// FIXME: For some reason emscripten won't let us do this
 		/*
 		result = mono_wasm_invoke_js_function_by_qualified_name_impl (
 			native_val, native_len, argumentCount,
 			marshalTypes, typeHandles, arguments
 		);
 		*/
-		result = (uint32_t)EM_ASM_INT(
+		result = EM_ASM_INT(
 			{
-				console.log($0, $1, $2);
-				console.log($3, $4);
 				return BINDING._invoke_js_function_by_qualified_name_impl(
 					$0, $1, $2, $3, $4
 				);

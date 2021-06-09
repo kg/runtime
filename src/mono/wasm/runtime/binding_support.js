@@ -235,48 +235,59 @@ var BindingSupportLib = {
 			return fn;
 		},
 
-		_read_function_argument_from_heap_for_invoke: function (
-			marshalType, typeHandle, pData
+		_unbox_function_argument_from_heap_for_invoke: function (
+			output, index, marshalType, typeHandle, pData
 		) {
 			// FIXME: Verify the other args?
-			if (typeHandle == 0)
-				return undefined;
-
-			console.log("_read_function_argument_from_heap_for_invoke", marshalType, typeHandle, pData);
+			if (typeHandle === 0) {
+				output[index] = undefined;
+				return 0;
+			}
 
 			// TODO: Pointers
 			switch (marshalType) {
 				case this.MARSHAL_TYPE_INT: // int
-					return Module.HEAP32[pData / 4];
+					output[index] = Module.HEAP32[pData / 4];
+					return 0;
 				case this.MARSHAL_TYPE_VT: // struct
 					// FIXME
-					throw new Error ("Struct unbox not implemented");
+					output[index] = this._unbox_struct_rooted_from_address (pData, typeHandle);
+					return 0;
 				case this.MARSHAL_TYPE_UINT32: // uint32
-					return Module.HEAPU32[pData / 4];
+					output[index] = Module.HEAPU32[pData / 4];
+					return 0;
 				case this.MARSHAL_TYPE_FP32: // float32
-					return Module.HEAPF32[pData / 4];
+					output[index] = Module.HEAPF32[pData / 4];
+					return 0;
 				case this.MARSHAL_TYPE_FP64: // float64
-					return Module.HEAPF64[pData / 8];
+					output[index] = Module.HEAPF64[pData / 8];
+					return 0;
 				case this.MARSHAL_TYPE_BOOL: // boolean
-					return (Module.HEAP32[pData / 4]) !== 0;
+					output[index] = (Module.HEAP32[pData / 4]) !== 0;
+					return 0;
 				case this.MARSHAL_TYPE_CHAR: // char
-					return String.fromCharCode(Module.HEAP32[pData / 4]);
+					output[index] = String.fromCharCode(Module.HEAP32[pData / 4]);
+					return 0;
 				case this.MARSHAL_TYPE_DELEGATE:
 				case this.MARSHAL_TYPE_TASK:
 				case this.MARSHAL_TYPE_OBJECT:
 				case this.MARSHAL_TYPE_URI:
-					return this.unbox_mono_obj(pData);
+					output[index] = this.unbox_mono_obj(pData);
 					// FIXME: This should work, but doesn't
 					/*
 					var klass = this.mono_wasm_type_get_class(typeHandle);
 					return this._unbox_mono_obj_rooted_with_known_nonprimitive_type (pData, typeHandle, klass);
 					*/
+					return 0;
 				case this.MARSHAL_TYPE_STRING:
-					return this.conv_string(pData, false);
+					output[index] = this.conv_string(pData, false);
+					return 0;
 				case this.MARSHAL_TYPE_STRING_INTERNED:
-					return this.conv_string(pData, true);
+					output[index] = this.conv_string(pData, true);
+					return 0;
 				default:
-					throw new Error ("Unbox/convert not implemented for marshal type " + marshalType);
+					console.error("Unbox/convert not implemented for marshal type " + marshalType);
+					return this.INVOKERESULT_InvalidArgumentType;
 			}
 		},
 
@@ -288,13 +299,18 @@ var BindingSupportLib = {
 			pMarshalTypes = (pMarshalTypes / 4) | 0;
 			pTypeHandles = (pTypeHandles / 4) | 0;
 			pArguments = (pArguments / 4) | 0;
-			for (var i = 0; i < argumentCount; i++) {
-				jsArguments[i] = this._read_function_argument_from_heap_for_invoke(
+
+			for (var i = 0; i < argumentCount; i++) {				
+				var unboxResult = this._unbox_function_argument_from_heap_for_invoke(
+					jsArguments, i,
 					Module.HEAPU32[pMarshalTypes + i],
 					Module.HEAPU32[pTypeHandles + i],
 					Module.HEAPU32[pArguments + i]
 				);
+				if (unboxResult)
+					return unboxResult;
 			}
+
 			var invokeResult;
 			try {
 				invokeResult = fn.apply(null, jsArguments);
@@ -1399,7 +1415,7 @@ var BindingSupportLib = {
 			return this._struct_unboxer_cache.get (typePtr);
 		},
 
-		_unbox_struct_rooted: function (unbox_buffer, mono_obj) {
+		_unbox_struct_rooted_from_address: function (dataOffset, typePtr) {
 			// TODO: Solve this by using a temporary unbox buffer, or using a different spot in the unbox buffer
 			if (this._is_unboxing_struct && (this._unbox_buffer === unbox_buffer))
 				throw new Error("Re-entrant struct unboxing detected. This is not currently supported.");
@@ -1416,7 +1432,6 @@ var BindingSupportLib = {
 					throw new Error(`classPtr for struct obj at address ${mono_obj} is null or undefined`);
 				}
 
-				var typePtr = this.mono_wasm_class_get_type(classPtr);
 				var unboxer = this._get_struct_unboxer_for_type(typePtr);
 				if (!unboxer)
 					throw new Error (`No CustomJavaScriptMarshaler found for struct type ${this._get_type_name(typePtr)}`);

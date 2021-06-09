@@ -90,7 +90,6 @@ namespace System.Runtime.InteropServices.JavaScript
                 // AddrOfPinnedObject on the pin will point to the interior of the object, which isn't
                 //  what we want here.
                 var address = *(IntPtr*)Unsafe.AsPointer(ref obj);
-                Debug.WriteLine($"object of type {typeof(T)} address == {address}");
                 return address;
             }
         }
