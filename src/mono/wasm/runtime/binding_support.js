@@ -233,7 +233,7 @@ var BindingSupportLib = {
 				if (!str)
 					return this.INVOKERESULT_InvalidFunctionName;
 			
-				fn = globalThis[str];
+				fn = this._walk_global_scope_to_find_function(str);
 				if (fn === undefined)
 					// HACK: Distinguish between "the cache has no value in it" and "the cached value is undefined"
 					fn = "<undefined>";
@@ -243,6 +243,26 @@ var BindingSupportLib = {
 			if (typeof (fn) !== "function")
 				return this.INVOKERESULT_FunctionNotFound;
 			
+			return fn;
+		},
+
+		_walk_global_scope_to_find_function: function (str) {
+			fn = globalThis[str];
+
+			if (typeof (fn) !== "function") {
+				var parts = str.split(".");
+				var link = globalThis;
+				for (var i = 0; i < parts.length; i++) {
+					if (!link)
+						return link;
+
+					var nextLink = link[parts[i]];
+					console.log(link, parts[i], "->", nextLink);
+					link = nextLink;
+				}
+				return link;
+			}
+
 			return fn;
 		},
 
