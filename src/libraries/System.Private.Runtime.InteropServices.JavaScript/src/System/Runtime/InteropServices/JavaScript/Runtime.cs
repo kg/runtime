@@ -19,7 +19,9 @@ namespace System.Runtime.InteropServices.JavaScript
         InvalidArgumentType,
         MissingArgumentType,
         NullArgumentPointer,
-        InternalError
+        FunctionHadReturnValue,
+        FunctionThrewException,
+        InternalError,
     }
 
     public static class Runtime
@@ -46,7 +48,55 @@ namespace System.Runtime.InteropServices.JavaScript
         }
 
         public static InvokeJSResult InvokeJSFunctionByName (string internedFunctionName) {
-            return (InvokeJSResult)Interop.Runtime.InvokeJSFunctionByName(internedFunctionName);
+            return (InvokeJSResult)Interop.Runtime.InvokeJSFunction(
+                internedFunctionName, 0,
+                IntPtr.Zero, IntPtr.Zero,
+                IntPtr.Zero, IntPtr.Zero,
+                IntPtr.Zero, IntPtr.Zero
+            );
+        }
+
+        private static unsafe IntPtr GetAddressOfInvokeArgument<T> (ref T arg, out GCHandle pin) {
+            pin = default(GCHandle);
+            if (typeof(T).IsPointer) {
+                // HACK: This is a raw pointer, we want to get the actual pointer (instead of the
+                //  address of the pointer in memory) and pass that to the callee
+                Debug.WriteLine($"coercing {typeof(T)} to IntPtr");
+                return *(IntPtr*)Unsafe.AsPointer(ref arg);
+            } else if (typeof(T).IsValueType) {
+                // HACK: This is a value type being passed by-ref into our caller, so we
+                //  don't need to do anything to ensure that it survives until our caller
+                //  returns and the invocation into JS is complete. We can just return its address
+                Debug.WriteLine($"ref-ing value of type {typeof(T)}");
+                return (IntPtr)Unsafe.AsPointer(ref arg);
+            } else {
+                // FIXME: Do we even need to do this? The object reference is on the stack, so it's
+                //  reachable by the collector. I assume it can still be relocated unless we pin it
+                Debug.WriteLine($"pinning object of type {typeof(T)}");
+                pin = GCHandle.Alloc((object?)arg, GCHandleType.Pinned);
+                return pin.AddrOfPinnedObject();
+            }
+        }
+
+        public static unsafe InvokeJSResult InvokeJSFunctionByName<T1> (string internedFunctionName, ref T1 arg1) {
+            var handle1 = typeof(T1).TypeHandle;
+            var addr1 = GetAddressOfInvokeArgument(ref arg1, out GCHandle pin1);
+            Debug.WriteLine($"Handle of arg1 is {handle1.Value}, address is {addr1.ToInt32()}");
+            var value1 = *(int*)addr1;
+            Debug.WriteLine($"arg1 as int is {value1}");
+            var resultCode = Interop.Runtime.InvokeJSFunction(
+                internedFunctionName, 1,
+                handle1.Value, addr1,
+                IntPtr.Zero, IntPtr.Zero,
+                IntPtr.Zero, IntPtr.Zero
+            );
+            if (pin1.IsAllocated)
+                pin1.Free();
+            return (InvokeJSResult)resultCode;
+        }
+
+        public static InvokeJSResult InvokeJSFunctionByName<T1> (string internedFunctionName, T1 arg1) {
+            return InvokeJSFunctionByName(internedFunctionName, ref arg1);
         }
 
         public static Function? CompileFunction(string snippet)

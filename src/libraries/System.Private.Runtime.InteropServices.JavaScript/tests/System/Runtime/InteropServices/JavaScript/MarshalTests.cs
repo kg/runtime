@@ -1059,5 +1059,24 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             });
             Assert.StartsWith("Error: No CustomJavaScriptMarshaler found for struct type System.Threading.Tasks.ValueTask`1[System.Int32]", exc.Message);
         }
+        
+        public static void InvokeByNameBasic()
+        {
+            HelperMarshal._stringResource = null;
+            Runtime.InvokeJS("globalThis._test_function = function () { App.call_test_method ('InvokeString', [ 'test' ], 's') }");
+            var result = Runtime.InvokeJSFunctionByName("_test_function");
+            Assert.Equal(InvokeJSResult.Success, result);
+            Assert.Equal("test", HelperMarshal._stringResource);
+        }
+
+        [Fact]
+        public static void InvokeByNameIntArgument()
+        {
+            HelperMarshal._intValue = 0;
+            Runtime.InvokeJS("globalThis._test_function_1arg = function (i) { App.call_test_method ('InvokeInt', [ i ], 'i') }");
+            var result = Runtime.InvokeJSFunctionByName("_test_function_1arg", 7);
+            Assert.Equal(InvokeJSResult.Success, result);
+            Assert.Equal(7, HelperMarshal._intValue);
+        }
     }
 }

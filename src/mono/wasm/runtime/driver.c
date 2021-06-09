@@ -201,23 +201,24 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	MonoType *type2, MonoObject *arg2,
 	MonoType *type3, MonoObject *arg3
 ) {
-	MonoString *pString = mono_string_is_interned (internedFunctionName);
-	if (!internedFunctionName || pString != internedFunctionName)
+	EM_ASM({
+		console.log("entering mono_wasm_invoke_js_function_by_qualified_name");
+	});
+
+	if (!internedFunctionName || !mono_string_instance_is_interned (internedFunctionName))
 		return INVOKERESULT_InvalidFunctionName;
 
 	if (argumentCount > 3)
 		return INVOKERESULT_InvalidArgumentCount;
-
-	mono_unichar2 *native_val = mono_string_chars (pString);
-	int native_len = mono_string_length (pString) * 2;
-	if (native_len < 1)
-		return INVOKERESULT_InvalidFunctionName;
 	
-	int *marshalTypes = g_new0 (int, argumentCount);
-	MonoType **typeHandles = g_new0 (MonoType *, argumentCount);
-	MonoObject **arguments = g_new0 (MonoObject *, argumentCount);
+	int *marshalTypes = NULL;
+	MonoType **typeHandles = NULL;
+	MonoObject **arguments = NULL;
 
 	if (argumentCount > 0) {
+		marshalTypes = g_new0 (int, argumentCount);
+		typeHandles = g_new0 (MonoType *, argumentCount);
+		arguments = g_new0 (MonoObject *, argumentCount);
 		typeHandles[0] = type1;
 		arguments[0] = arg1;
 	}
@@ -239,6 +240,10 @@ mono_wasm_invoke_js_function_by_qualified_name (
 			result = INVOKERESULT_MissingArgumentType;
 			break;
 		}
+
+		EM_ASM({
+			console.log("typeHandles[i] == ", $0);
+		}, (int)typeHandles[i]);
 
 		klass = mono_class_from_mono_type (typeHandles[i]);
 		mono_type = mono_type_get_type (typeHandles[i]);
@@ -262,16 +267,20 @@ mono_wasm_invoke_js_function_by_qualified_name (
 		result = (uint32_t)EM_ASM_INT(
 			{
 				console.log($0, $1, $2);
-				console.log($3, $4, $5);
-				throw new Error("by_qualified_name");
-			}, (int)native_val, native_len, (int)argumentCount,
+				console.log($3, $4);
+				return BINDING._invoke_js_function_by_qualified_name_impl(
+					$0, $1, $2, $3, $4
+				);
+			}, internedFunctionName, (int)argumentCount,
 			(int)marshalTypes, (int)typeHandles, (int)arguments
 		);
 	}
 
-	free(marshalTypes);
-	free(typeHandles);
-	free(arguments);
+	if (argumentCount > 0) {
+		free(marshalTypes);
+		free(typeHandles);
+		free(arguments);
+	}
 
 	return result;
 }

@@ -55,9 +55,9 @@ internal static partial class Interop
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         internal static extern int InvokeJSFunction(
             string internedFunctionName, uint argumentCount,
-            RuntimeTypeHandle type1, IntPtr arg1,
-            RuntimeTypeHandle type2, IntPtr arg2,
-            RuntimeTypeHandle type3, IntPtr arg3
+            IntPtr type1, IntPtr arg1,
+            IntPtr type2, IntPtr arg2,
+            IntPtr type3, IntPtr arg3
         );
 
         // / <summary>
@@ -71,16 +71,6 @@ internal static partial class Interop
             if (exception != 0)
                 throw new JSException(res);
             return res;
-        }
-
-        public static int InvokeJSFunctionByName (string internedFunctionName) {
-            RuntimeTypeHandle noHandle = default;
-            return InvokeJSFunction(
-                internedFunctionName, 0,
-                noHandle, IntPtr.Zero,
-                noHandle, IntPtr.Zero,
-                noHandle, IntPtr.Zero
-            );
         }
 
         public static System.Runtime.InteropServices.JavaScript.Function? CompileFunction(string snippet)

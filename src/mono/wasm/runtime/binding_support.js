@@ -26,7 +26,7 @@ var BindingSupportLib = {
 			module ["mono_bind_assembly_entry_point"] = BINDING.bind_assembly_entry_point.bind(BINDING);
 			module ["mono_call_assembly_entry_point"] = BINDING.call_assembly_entry_point.bind(BINDING);
 			module ["mono_intern_string"] = BINDING.mono_intern_string.bind(BINDING);
-			module ["mono_wasm_invoke_js_function_by_qualified_name_impl"] = BINDING.mono_wasm_invoke_js_function_by_qualified_name_impl.bind(BINDING);
+			module ["mono_wasm_invoke_js_function_by_qualified_name_impl"] = BINDING._invoke_js_function_by_qualified_name_impl.bind(BINDING);
 		},
 
 		bindings_lazy_init: function () {
@@ -174,10 +174,69 @@ var BindingSupportLib = {
 
 		},
 
-		mono_wasm_invoke_js_function_by_qualified_name_impl: function (
-			pInternedFunctionName, internedFunctionNameLength, argumentCount,
+		  INVOKERESULT_Success: 0
+		, INVOKERESULT_InvalidFunctionName: 1 // null/blank name, name not interned, or syntax errror
+		, INVOKERESULT_FunctionNotFound: 2 // no function found matching this function name
+		, INVOKERESULT_InvalidArgumentCount: 3 // argument count outside valid range [0-3]
+		, INVOKERESULT_InvalidArgumentType: 4 // an argument was of an unsupported type
+		, INVOKERESULT_MissingArgumentType: 5 // an argument value was provided without a type handle
+		, INVOKERESULT_NullArgumentPointer: 6 // the pointer to a non-nullable argument value was 0
+		, INVOKERESULT_FunctionHadReturnValue: 7 // the target function returned a value
+		, INVOKERESULT_FunctionThrewException: 8 // the target function threw an exception
+		, INVOKERESULT_InternalError: 9 // an unspecified internal error occurred
+
+		,_resolve_js_function_by_qualified_name: function (
+			pInternedFunctionName
+		) {
+			var str = this.conv_string(pInternedFunctionName, true);
+			if (!str)
+				return this.INVOKERESULT_InvalidFunctionName;
+
+			console.log(str);
+			
+			var fn = globalThis[str];
+			if (typeof (fn) !== "function")
+				return this.INVOKERESULT_FunctionNotFound;
+			
+			return fn;
+		},
+
+		_perform_invoke_js_function: function (
+			fn, argumentCount,
 			pMarshalTypes, pTypeHandles, pArguments
 		) {
+			var invokeResult;
+			try {
+				invokeResult = fn.call(null);
+			} catch (exc) {
+				console.error("invoked function threw unhandled error", exc);
+				return this.INVOKERESULT_FunctionThrewException;
+			}
+
+			if (typeof (invokeResult) !== "undefined")
+				return this.INVOKERESULT_FunctionHadReturnValue;
+			else
+				return this.INVOKERESULT_Success;
+		},
+
+		_invoke_js_function_by_qualified_name_impl: function (
+			pInternedFunctionName, argumentCount,
+			pMarshalTypes, pTypeHandles, pArguments
+		) {
+			console.log(pInternedFunctionName, argumentCount);
+			var fn = this._resolve_js_function_by_qualified_name(pInternedFunctionName);
+			if (typeof (fn) !== "function")
+				return fn;
+
+			var result = this._perform_invoke_js_function(
+				fn, argumentCount, 
+				pMarshalTypes, pTypeHandles, pArguments
+			);
+
+			if (typeof (result) !== "number")
+				return this.INVOKERESULT_InternalError;
+			else 
+				return result;
 		},
 
 		assembly_load: function (name) {
