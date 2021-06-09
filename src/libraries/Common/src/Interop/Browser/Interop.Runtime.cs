@@ -53,8 +53,8 @@ internal static partial class Interop
         internal static extern object TypedArrayCopyFrom(int jsObjHandle, int arrayPtr, int begin, int end, int bytesPerElement, out int exceptionalResult);
 
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
-        internal static extern UInt32 InvokeJSFunction(
-            string internedFunctionName, UInt32 argumentCount,
+        internal static extern int InvokeJSFunction(
+            string internedFunctionName, uint argumentCount,
             RuntimeTypeHandle type1, IntPtr arg1,
             RuntimeTypeHandle type2, IntPtr arg2,
             RuntimeTypeHandle type3, IntPtr arg3
@@ -73,7 +73,7 @@ internal static partial class Interop
             return res;
         }
 
-        public static UInt32 InvokeJSFunctionByName (string internedFunctionName) {
+        public static int InvokeJSFunctionByName (string internedFunctionName) {
             RuntimeTypeHandle noHandle = default;
             return InvokeJSFunction(
                 internedFunctionName, 0,

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace System.Runtime.InteropServices.JavaScript
 {
-    public enum InvokeJSResult : uint {
+    public enum InvokeJSResult : int {
         Success = 0,
         InvalidFunctionName,
         FunctionNotFound,
@@ -46,7 +46,7 @@ namespace System.Runtime.InteropServices.JavaScript
         }
 
         public static InvokeJSResult InvokeJSFunctionByName (string internedFunctionName) {
-            return Interop.Runtime.InvokeJSFunctionByName(internedFunctionName);
+            return (InvokeJSResult)Interop.Runtime.InvokeJSFunctionByName(internedFunctionName);
         }
 
         public static Function? CompileFunction(string snippet)

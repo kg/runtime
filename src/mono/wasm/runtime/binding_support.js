@@ -26,6 +26,7 @@ var BindingSupportLib = {
 			module ["mono_bind_assembly_entry_point"] = BINDING.bind_assembly_entry_point.bind(BINDING);
 			module ["mono_call_assembly_entry_point"] = BINDING.call_assembly_entry_point.bind(BINDING);
 			module ["mono_intern_string"] = BINDING.mono_intern_string.bind(BINDING);
+			module ["mono_wasm_invoke_js_function_by_qualified_name_impl"] = BINDING.mono_wasm_invoke_js_function_by_qualified_name_impl.bind(BINDING);
 		},
 
 		bindings_lazy_init: function () {
@@ -171,6 +172,12 @@ var BindingSupportLib = {
 			this.safehandle_get_handle = get_method ("SafeHandleGetHandle");
 			this.safehandle_release_by_handle = get_method ("SafeHandleReleaseByHandle");
 
+		},
+
+		mono_wasm_invoke_js_function_by_qualified_name_impl: function (
+			pInternedFunctionName, internedFunctionNameLength, argumentCount,
+			pMarshalTypes, pTypeHandles, pArguments
+		) {
 		},
 
 		assembly_load: function (name) {

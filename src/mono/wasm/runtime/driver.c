@@ -35,6 +35,14 @@ extern void* mono_wasm_invoke_js_blazor (MonoString **exceptionMessage, void *ca
 extern void* mono_wasm_invoke_js_marshalled (MonoString **exceptionMessage, void *asyncHandleLongPtr, MonoString *funcName, MonoString *argsJson);
 extern void* mono_wasm_invoke_js_unmarshalled (MonoString **exceptionMessage, MonoString *funcName, void* arg0, void* arg1, void* arg2);
 
+// FIXME: Why doesn't this work? What is wrong with emscripten's linker?
+/*
+extern uint32_t mono_wasm_invoke_js_function_by_qualified_name_impl (
+	mono_unichar2 *internedFunctionName, int internedFunctionNameLength, uint32_t argumentCount,
+	int* marshalTypes, MonoType **typeHandles, MonoObject **arguments
+);
+*/
+
 void mono_wasm_enable_debugging (int);
 
 int mono_wasm_marshal_type_from_mono_type (int mono_type, MonoClass *klass, MonoType *type);
@@ -186,11 +194,6 @@ mono_wasm_invoke_js (MonoString *str, int *is_exception)
 #define INVOKERESULT_NullArgumentPointer 6 // the pointer to a non-nullable argument value was 0
 #define INVOKERESULT_InternalError 7 // an unspecified internal error occurred
 
-extern uint32_t mono_wasm_invoke_js_function_by_qualified_name_impl (
-	mono_unichar2 *internedFunctionName, int internedFunctionNameLength, uint32_t argumentCount,
-	int* marshalTypes, MonoType **typeHandles, MonoObject **arguments
-);
-
 static uint32_t
 mono_wasm_invoke_js_function_by_qualified_name (
 	MonoString *internedFunctionName, uint32_t argumentCount,
@@ -249,9 +252,20 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	}
 	
 	if (result == 0) {
+		// FIXME
+		/*
 		result = mono_wasm_invoke_js_function_by_qualified_name_impl (
 			native_val, native_len, argumentCount,
 			marshalTypes, typeHandles, arguments
+		);
+		*/
+		result = (uint32_t)EM_ASM_INT(
+			{
+				console.log($0, $1, $2);
+				console.log($3, $4, $5);
+				throw new Error("by_qualified_name");
+			}, (int)native_val, native_len, (int)argumentCount,
+			(int)marshalTypes, (int)typeHandles, (int)arguments
 		);
 	}
 
