@@ -220,9 +220,7 @@ var BindingSupportLib = {
 		, MARSHAL_ERROR_NULL_CLASS_POINTER: 513
 		, MARSHAL_ERROR_NULL_TYPE_POINTER: 514
 
-		,_resolve_js_function_by_qualified_name: function (
-			pInternedFunctionName
-		) {
+		,_resolve_js_function_by_qualified_name: function (pInternedFunctionName) {
 			// This would more accurately track misses but that isn't worth the overhead
 			/*
 			if (this._invoke_js_function_cache.has(pInternedFunctionName))
@@ -236,6 +234,9 @@ var BindingSupportLib = {
 					return this.INVOKERESULT_InvalidFunctionName;
 			
 				fn = globalThis[str];
+				if (fn === undefined)
+					// HACK: Distinguish between "the cache has no value in it" and "the cached value is undefined"
+					fn = "<undefined>";
 				this._invoke_js_function_cache.set(pInternedFunctionName, fn);
 			}
 

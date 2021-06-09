@@ -54,7 +54,7 @@ namespace System.Runtime.InteropServices.JavaScript
             Type type3, IntPtr arg3
         ) {
             return (InvokeJSResult)Interop.Runtime.InvokeJSFunction(
-                internedFunctionName, 0,
+                internedFunctionName, argumentCount,
                 type1?.TypeHandle.Value ?? IntPtr.Zero, arg1,
                 type2?.TypeHandle.Value ?? IntPtr.Zero, arg2,
                 type3?.TypeHandle.Value ?? IntPtr.Zero, arg3

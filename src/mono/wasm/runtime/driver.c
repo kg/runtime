@@ -198,7 +198,7 @@ mono_wasm_invoke_js (MonoString *str, int *is_exception)
 
 static int32_t
 mono_wasm_invoke_js_function_by_qualified_name (
-	MonoString *internedFunctionName, uint32_t argumentCount,
+	MonoString *internedFunctionName, int32_t argumentCount,
 	MonoType *type1, void *arg1,
 	MonoType *type2, void *arg2,
 	MonoType *type3, void *arg3
@@ -206,7 +206,7 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	if (!internedFunctionName || !mono_string_instance_is_interned (internedFunctionName))
 		return INVOKERESULT_InvalidFunctionName;
 
-	if (argumentCount > 3)
+	if ((argumentCount < 0) || (argumentCount > 3))
 		return INVOKERESULT_InvalidArgumentCount;
 	
 	int *marshalTypes = NULL;
@@ -233,7 +233,7 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	MonoClass *klass;
 	int mono_type;
 
-	for (uint32_t i = 0; i < argumentCount; i++) {
+	for (int32_t i = 0; i < argumentCount; i++) {
 		if (typeHandles[i] == 0) {
 			result = INVOKERESULT_MissingArgumentType;
 			break;
