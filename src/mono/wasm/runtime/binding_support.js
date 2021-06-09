@@ -201,13 +201,65 @@ var BindingSupportLib = {
 			return fn;
 		},
 
+		_read_function_argument_from_heap_for_invoke: function (
+			marshalType, typeHandle, pData
+		) {
+			// FIXME: Verify the other args?
+			if (typeHandle == 0)
+				return undefined;
+
+			console.log("_read_function_argument_from_heap_for_invoke", marshalType, typeHandle, pData);
+
+			// TODO: Pointers
+			switch (marshalType) {
+				case 1: // int
+					return Module.HEAP32[pData / 4];
+				case 4: // struct
+					// FIXME
+					throw new Error ("Struct unbox not implemented");
+				case 25: // uint32
+					return Module.HEAPU32[pData / 4];
+				case 24: // float32
+					return Module.HEAPF32[pData / 4];
+				case 2: // float64
+					return Module.HEAPF64[pData / 8];
+				case 8: // boolean
+					return (Module.HEAP32[pData / 4]) !== 0;
+				case 28: // char
+					return String.fromCharCode(Module.HEAP32[pData / 4]);
+				case 5:
+				case 6:
+				case 7:
+				case 22:
+					// FIXME
+					var klass = this.mono_wasm_type_get_class(typeHandle);
+					return this._unbox_mono_obj_rooted_with_known_nonprimitive_type (pData, typeHandle, klass);
+				case 3:
+					return this.conv_string(pData, false);
+				case 29:
+					return this.conv_string(pData, true);
+				default:
+					throw new Error ("Unbox/convert not implemented for marshal type " + marshalType);
+			}
+		},
+
 		_perform_invoke_js_function: function (
 			fn, argumentCount,
 			pMarshalTypes, pTypeHandles, pArguments
 		) {
+			var jsArguments = new Array(argumentCount);
+			pMarshalTypes = (pMarshalTypes / 4) | 0;
+			pTypeHandles = (pTypeHandles / 4) | 0;
+			for (var i = 0; i < argumentCount; i++) {
+				jsArguments[i] = this._read_function_argument_from_heap_for_invoke(
+					Module.HEAPU32[pMarshalTypes + i],
+					Module.HEAPU32[pTypeHandles + i],
+					Module.HEAPU32[pArguments + i]
+				);
+			}
 			var invokeResult;
 			try {
-				invokeResult = fn.call(null);
+				invokeResult = fn.apply(null, jsArguments);
 			} catch (exc) {
 				console.error("invoked function threw unhandled error", exc);
 				return this.INVOKERESULT_FunctionThrewException;

@@ -67,7 +67,7 @@ namespace System.Runtime.InteropServices.JavaScript
                 // HACK: This is a value type being passed by-ref into our caller, so we
                 //  don't need to do anything to ensure that it survives until our caller
                 //  returns and the invocation into JS is complete. We can just return its address
-                Debug.WriteLine($"ref-ing value of type {typeof(T)}");
+                // Debug.WriteLine($"ref-ing value of type {typeof(T)}");
                 return (IntPtr)Unsafe.AsPointer(ref arg);
             } else {
                 // FIXME: Do we even need to do this? The object reference is on the stack, so it's
@@ -82,8 +82,6 @@ namespace System.Runtime.InteropServices.JavaScript
             var handle1 = typeof(T1).TypeHandle;
             var addr1 = GetAddressOfInvokeArgument(ref arg1, out GCHandle pin1);
             Debug.WriteLine($"Handle of arg1 is {handle1.Value}, address is {addr1.ToInt32()}");
-            var value1 = *(int*)addr1;
-            Debug.WriteLine($"arg1 as int is {value1}");
             var resultCode = Interop.Runtime.InvokeJSFunction(
                 internedFunctionName, 1,
                 handle1.Value, addr1,
