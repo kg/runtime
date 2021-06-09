@@ -1078,5 +1078,27 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             Assert.Equal(InvokeJSResult.Success, result);
             Assert.Equal(7, HelperMarshal._intValue);
         }
+
+        [Fact]
+        public static void InvokeByNameIntPtrArgument()
+        {
+            var expected = new IntPtr(42);
+            HelperMarshal._intPtrValue = IntPtr.Zero;
+            Runtime.InvokeJS("globalThis._test_function_intptr = function (i) { App.call_test_method ('InvokeIntPtr', [ i ], 'i') }");
+            var result = Runtime.InvokeJSFunctionByName("_test_function_intptr", expected);
+            Assert.Equal(InvokeJSResult.Success, result);
+            Assert.Equal(expected, HelperMarshal._intPtrValue);
+        }
+
+        [Fact]
+        public static void InvokeByNameStringArgument()
+        {
+            var expected = "hello world";
+            HelperMarshal._stringResource = null;
+            Runtime.InvokeJS("globalThis._test_function_string = function (s) { App.call_test_method ('InvokeString', [ s ], 's') }");
+            var result = Runtime.InvokeJSFunctionByName("_test_function_string", expected);
+            Assert.Equal(InvokeJSResult.Success, result);
+            Assert.Equal(expected, HelperMarshal._stringResource);
+        }
     }
 }

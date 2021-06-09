@@ -75,7 +75,6 @@ namespace System.Runtime.InteropServices.JavaScript
             if (typeof(T).IsPointer) {
                 // HACK: This is a raw pointer, we want to get the actual pointer (instead of the
                 //  address of the pointer in memory) and pass that to the callee
-                Debug.WriteLine($"coercing {typeof(T)} to IntPtr");
                 return *(IntPtr*)Unsafe.AsPointer(ref arg);
             } else if (typeof(T).IsValueType) {
                 // HACK: This is a value type being passed by-ref into our caller, so we
@@ -86,19 +85,19 @@ namespace System.Runtime.InteropServices.JavaScript
             } else {
                 // FIXME: Do we even need to do this? The object reference is on the stack, so it's
                 //  reachable by the collector. I assume it can still be relocated unless we pin it
-                Debug.WriteLine($"pinning object of type {typeof(T)}");
                 pin = GCHandle.Alloc((object?)arg, GCHandleType.Pinned);
-                return pin.AddrOfPinnedObject();
+                // AddrOfPinnedObject on the pin will point to the interior of the object, which isn't
+                //  what we want here
+                var address = *(IntPtr*)Unsafe.AsPointer(ref arg);
+                Debug.WriteLine($"pinning object of type {typeof(T)}, addr = {address}");
+                return address;
             }
         }
 
-        public static unsafe InvokeJSResult InvokeJSFunctionByName<T1> (string internedFunctionName, ref T1 arg1) {
-            var handle1 = typeof(T1).TypeHandle;
-            var addr1 = GetAddressOfInvokeArgument(ref arg1, out GCHandle pin1);
-            Debug.WriteLine($"Handle of arg1 is {handle1.Value}, address is {addr1.ToInt32()}");
+        public static InvokeJSResult InvokeJSFunctionByName<T1> (string internedFunctionName, ref T1 arg1) {
             var resultCode = Interop.Runtime.InvokeJSFunction(
                 internedFunctionName, 1,
-                handle1.Value, addr1,
+                typeof(T1).TypeHandle.Value, GetAddressOfInvokeArgument(ref arg1, out GCHandle pin1),
                 IntPtr.Zero, IntPtr.Zero,
                 IntPtr.Zero, IntPtr.Zero
             );
@@ -107,8 +106,46 @@ namespace System.Runtime.InteropServices.JavaScript
             return (InvokeJSResult)resultCode;
         }
 
+        public static InvokeJSResult InvokeJSFunctionByName<T1, T2> (string internedFunctionName, ref T1 arg1, ref T2 arg2) {
+            var resultCode = Interop.Runtime.InvokeJSFunction(
+                internedFunctionName, 2,
+                typeof(T1).TypeHandle.Value, GetAddressOfInvokeArgument(ref arg1, out GCHandle pin1),
+                typeof(T2).TypeHandle.Value, GetAddressOfInvokeArgument(ref arg2, out GCHandle pin2),
+                IntPtr.Zero, IntPtr.Zero
+            );
+            if (pin1.IsAllocated)
+                pin1.Free();
+            if (pin2.IsAllocated)
+                pin2.Free();
+            return (InvokeJSResult)resultCode;
+        }
+
+        public static InvokeJSResult InvokeJSFunctionByName<T1, T2, T3> (string internedFunctionName, ref T1 arg1, ref T2 arg2, ref T3 arg3) {
+            var resultCode = Interop.Runtime.InvokeJSFunction(
+                internedFunctionName, 3,
+                typeof(T1).TypeHandle.Value, GetAddressOfInvokeArgument(ref arg1, out GCHandle pin1),
+                typeof(T2).TypeHandle.Value, GetAddressOfInvokeArgument(ref arg2, out GCHandle pin2),
+                typeof(T3).TypeHandle.Value, GetAddressOfInvokeArgument(ref arg3, out GCHandle pin3)
+            );
+            if (pin1.IsAllocated)
+                pin1.Free();
+            if (pin2.IsAllocated)
+                pin2.Free();
+            if (pin3.IsAllocated)
+                pin3.Free();
+            return (InvokeJSResult)resultCode;
+        }
+
         public static InvokeJSResult InvokeJSFunctionByName<T1> (string internedFunctionName, T1 arg1) {
             return InvokeJSFunctionByName(internedFunctionName, ref arg1);
+        }
+
+        public static InvokeJSResult InvokeJSFunctionByName<T1, T2> (string internedFunctionName, T1 arg1, T2 arg2) {
+            return InvokeJSFunctionByName(internedFunctionName, ref arg1, ref arg2);
+        }
+
+        public static InvokeJSResult InvokeJSFunctionByName<T1, T2, T3> (string internedFunctionName, T1 arg1, T2 arg2, T3 arg3) {
+            return InvokeJSFunctionByName(internedFunctionName, ref arg1, ref arg2, ref arg3);
         }
 
         public static Function? CompileFunction(string snippet)
