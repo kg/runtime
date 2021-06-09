@@ -137,6 +137,7 @@ var BindingSupportLib = {
 			this._interned_string_current_root_buffer_count = 0;
 			this._interned_js_string_table = new Map ();
 			this._custom_marshaler_info_cache = new Map ();
+			this._invoke_js_function_cache = new Map ();
 
 			// HACK: This method needs to be the absolute first one we bind, because
 			//  the process of binding other methods relies on it.
@@ -222,13 +223,22 @@ var BindingSupportLib = {
 		,_resolve_js_function_by_qualified_name: function (
 			pInternedFunctionName
 		) {
-			var str = this.conv_string(pInternedFunctionName, true);
-			if (!str)
-				return this.INVOKERESULT_InvalidFunctionName;
+			// This would more accurately track misses but that isn't worth the overhead
+			/*
+			if (this._invoke_js_function_cache.has(pInternedFunctionName))
+				fn = this._invoke_js_function_cache.get(pInternedFunctionName);
+			*/
 
-			console.log(str);
+			var fn = this._invoke_js_function_cache.get(pInternedFunctionName);
+			if (fn === undefined) {
+				var str = this.conv_string(pInternedFunctionName, true);
+				if (!str)
+					return this.INVOKERESULT_InvalidFunctionName;
 			
-			var fn = globalThis[str];
+				fn = globalThis[str];
+				this._invoke_js_function_cache.set(pInternedFunctionName, fn);
+			}
+
 			if (typeof (fn) !== "function")
 				return this.INVOKERESULT_FunctionNotFound;
 			
