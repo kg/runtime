@@ -47,6 +47,20 @@ namespace System.Runtime.InteropServices.JavaScript
             return Interop.Runtime.InvokeJS(str);
         }
 
+        public static InvokeJSResult InvokeJSFunctionByName (
+            string internedFunctionName, int argumentCount,
+            Type type1, IntPtr arg1,
+            Type type2, IntPtr arg2,
+            Type type3, IntPtr arg3
+        ) {
+            return (InvokeJSResult)Interop.Runtime.InvokeJSFunction(
+                internedFunctionName, 0,
+                type1?.TypeHandle.Value ?? IntPtr.Zero, arg1,
+                type2?.TypeHandle.Value ?? IntPtr.Zero, arg2,
+                type3?.TypeHandle.Value ?? IntPtr.Zero, arg3
+            );
+        }
+
         public static InvokeJSResult InvokeJSFunctionByName (string internedFunctionName) {
             return (InvokeJSResult)Interop.Runtime.InvokeJSFunction(
                 internedFunctionName, 0,

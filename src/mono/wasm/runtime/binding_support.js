@@ -250,6 +250,7 @@ var BindingSupportLib = {
 			var jsArguments = new Array(argumentCount);
 			pMarshalTypes = (pMarshalTypes / 4) | 0;
 			pTypeHandles = (pTypeHandles / 4) | 0;
+			pArguments = (pArguments / 4) | 0;
 			for (var i = 0; i < argumentCount; i++) {
 				jsArguments[i] = this._read_function_argument_from_heap_for_invoke(
 					Module.HEAPU32[pMarshalTypes + i],
