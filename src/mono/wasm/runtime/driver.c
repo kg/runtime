@@ -201,10 +201,6 @@ mono_wasm_invoke_js_function_by_qualified_name (
 	MonoType *type2, MonoObject *arg2,
 	MonoType *type3, MonoObject *arg3
 ) {
-	EM_ASM({
-		console.log("entering mono_wasm_invoke_js_function_by_qualified_name");
-	});
-
 	if (!internedFunctionName || !mono_string_instance_is_interned (internedFunctionName))
 		return INVOKERESULT_InvalidFunctionName;
 
@@ -240,10 +236,6 @@ mono_wasm_invoke_js_function_by_qualified_name (
 			result = INVOKERESULT_MissingArgumentType;
 			break;
 		}
-
-		EM_ASM({
-			console.log("typeHandles[i] == ", $0);
-		}, (int)typeHandles[i]);
 
 		klass = mono_class_from_mono_type (typeHandles[i]);
 		mono_type = mono_type_get_type (typeHandles[i]);

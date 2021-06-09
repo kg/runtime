@@ -84,12 +84,13 @@ namespace System.Runtime.InteropServices.JavaScript
                 return (IntPtr)Unsafe.AsPointer(ref arg);
             } else {
                 // FIXME: Do we even need to do this? The object reference is on the stack, so it's
-                //  reachable by the collector. I assume it can still be relocated unless we pin it
-                pin = GCHandle.Alloc((object?)arg, GCHandleType.Pinned);
+                //  reachable by the collector. Does HandleType.Normal even prevent relocation?
+                var obj = (object?)arg;
+                pin = GCHandle.Alloc(obj, GCHandleType.Normal);
                 // AddrOfPinnedObject on the pin will point to the interior of the object, which isn't
-                //  what we want here
-                var address = *(IntPtr*)Unsafe.AsPointer(ref arg);
-                Debug.WriteLine($"pinning object of type {typeof(T)}, addr = {address}");
+                //  what we want here.
+                var address = *(IntPtr*)Unsafe.AsPointer(ref obj);
+                Debug.WriteLine($"object of type {typeof(T)} address == {address}");
                 return address;
             }
         }

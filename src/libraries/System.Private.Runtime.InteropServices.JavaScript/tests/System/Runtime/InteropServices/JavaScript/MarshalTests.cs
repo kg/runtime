@@ -1100,5 +1100,16 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             Assert.Equal(InvokeJSResult.Success, result);
             Assert.Equal(expected, HelperMarshal._stringResource);
         }
+
+        [Fact]
+        public static void InvokeByNameUriArgument()
+        {
+            var expected = new System.Uri("https://www.example.com/");
+            HelperMarshal._uriValue = default(System.Uri);
+            Runtime.InvokeJS("globalThis._test_function_uri = function (uri) { App.call_test_method ('InvokeUri', [ uri ], 'u') }");
+            var result = Runtime.InvokeJSFunctionByName("_test_function_uri", expected);
+            Assert.Equal(InvokeJSResult.Success, result);
+            Assert.Equal(expected, HelperMarshal._uriValue);
+        }
     }
 }

@@ -185,6 +185,40 @@ var BindingSupportLib = {
 		, INVOKERESULT_FunctionThrewException: 8 // the target function threw an exception
 		, INVOKERESULT_InternalError: 9 // an unspecified internal error occurred
 
+		, MARSHAL_TYPE_NULL: 0
+		, MARSHAL_TYPE_INT: 1
+		, MARSHAL_TYPE_FP64: 2
+		, MARSHAL_TYPE_STRING: 3
+		, MARSHAL_TYPE_VT: 4
+		, MARSHAL_TYPE_DELEGATE: 5
+		, MARSHAL_TYPE_TASK: 6
+		, MARSHAL_TYPE_OBJECT: 7
+		, MARSHAL_TYPE_BOOL: 8
+		, MARSHAL_TYPE_ENUM: 9
+		, MARSHAL_TYPE_URI: 22
+		, MARSHAL_TYPE_SAFEHANDLE: 23
+		, MARSHAL_ARRAY_BYTE: 10
+		, MARSHAL_ARRAY_UBYTE: 11
+		, MARSHAL_ARRAY_UBYTE_C: 12
+		, MARSHAL_ARRAY_SHORT: 13
+		, MARSHAL_ARRAY_USHORT: 14
+		, MARSHAL_ARRAY_INT: 15
+		, MARSHAL_ARRAY_UINT: 16
+		, MARSHAL_ARRAY_FLOAT: 17
+		, MARSHAL_ARRAY_DOUBLE: 18
+		, MARSHAL_TYPE_FP32: 24
+		, MARSHAL_TYPE_UINT32: 25
+		, MARSHAL_TYPE_INT64: 26
+		, MARSHAL_TYPE_UINT64: 27
+		, MARSHAL_TYPE_CHAR: 28
+		, MARSHAL_TYPE_STRING_INTERNED: 29
+		, MARSHAL_TYPE_VOID: 30
+		, MARSHAL_TYPE_POINTER: 32
+
+		, MARSHAL_ERROR_BUFFER_TOO_SMALL: 512
+		, MARSHAL_ERROR_NULL_CLASS_POINTER: 513
+		, MARSHAL_ERROR_NULL_TYPE_POINTER: 514
+
 		,_resolve_js_function_by_qualified_name: function (
 			pInternedFunctionName
 		) {
@@ -212,31 +246,34 @@ var BindingSupportLib = {
 
 			// TODO: Pointers
 			switch (marshalType) {
-				case 1: // int
+				case this.MARSHAL_TYPE_INT: // int
 					return Module.HEAP32[pData / 4];
-				case 4: // struct
+				case this.MARSHAL_TYPE_VT: // struct
 					// FIXME
 					throw new Error ("Struct unbox not implemented");
-				case 25: // uint32
+				case this.MARSHAL_TYPE_UINT32: // uint32
 					return Module.HEAPU32[pData / 4];
-				case 24: // float32
+				case this.MARSHAL_TYPE_FP32: // float32
 					return Module.HEAPF32[pData / 4];
-				case 2: // float64
+				case this.MARSHAL_TYPE_FP64: // float64
 					return Module.HEAPF64[pData / 8];
-				case 8: // boolean
+				case this.MARSHAL_TYPE_BOOL: // boolean
 					return (Module.HEAP32[pData / 4]) !== 0;
-				case 28: // char
+				case this.MARSHAL_TYPE_CHAR: // char
 					return String.fromCharCode(Module.HEAP32[pData / 4]);
-				case 5:
-				case 6:
-				case 7:
-				case 22:
-					// FIXME
+				case this.MARSHAL_TYPE_DELEGATE:
+				case this.MARSHAL_TYPE_TASK:
+				case this.MARSHAL_TYPE_OBJECT:
+				case this.MARSHAL_TYPE_URI:
+					return this.unbox_mono_obj(pData);
+					// FIXME: This should work, but doesn't
+					/*
 					var klass = this.mono_wasm_type_get_class(typeHandle);
 					return this._unbox_mono_obj_rooted_with_known_nonprimitive_type (pData, typeHandle, klass);
-				case 3:
+					*/
+				case this.MARSHAL_TYPE_STRING:
 					return this.conv_string(pData, false);
-				case 29:
+				case this.MARSHAL_TYPE_STRING_INTERNED:
 					return this.conv_string(pData, true);
 				default:
 					throw new Error ("Unbox/convert not implemented for marshal type " + marshalType);
@@ -610,20 +647,20 @@ var BindingSupportLib = {
 		_unbox_mono_obj_rooted_with_known_nonprimitive_type: function (mono_obj, type, klass) {
 			//See MARSHAL_TYPE_ defines in driver.c
 			switch (type) {
-				case 26: // int64
-				case 27: // uint64
+				case this.MARSHAL_TYPE_INT64: // int64
+				case this.MARSHAL_TYPE_UINT64: // uint64
 					// TODO: Fix this once emscripten offers HEAPI64/HEAPU64 or can return them
 					throw new Error ("int64 not available");
-				case 3: // string
-				case 29: // interned string
+				case this.MARSHAL_TYPE_STRING: // string
+				case this.MARSHAL_TYPE_STRING_INTERNED: // interned string
 					return this.conv_string (mono_obj);
-				case 4: // struct
+				case this.MARSHAL_TYPE_VT: // struct
 					return this.extract_js_obj_with_possible_converter (mono_obj, klass);
-				case 5: // delegate
+				case this.MARSHAL_TYPE_DELEGATE: // delegate
 					return this._unbox_delegate_rooted (mono_obj);
-				case 6: // Task
+				case this.MARSHAL_TYPE_TASK: // Task
 					return this._unbox_task_rooted (mono_obj);
-				case 7: // ref type
+				case this.MARSHAL_TYPE_OBJECT: // ref type
 					return this.extract_js_obj_with_possible_converter (mono_obj, klass);
 				case 10: // arrays
 				case 11:
@@ -638,12 +675,12 @@ var BindingSupportLib = {
 				case 20:
 				case 21:
 					throw new Error ("Unsupported legacy marshal type code");
-				case 22: // clr .NET Uri
+				case this.MARSHAL_TYPE_URI: // clr .NET Uri
 					var uriValue = this._object_to_string (mono_obj);
 					return uriValue;
-				case 23: // clr .NET SafeHandle
+				case this.MARSHAL_TYPE_SAFEHANDLE: // clr .NET SafeHandle
 					return this._unbox_safehandle_rooted (mono_obj);
-				case 30:
+				case this.MARSHAL_TYPE_VOID:
 					return undefined;
 				default:
 					throw new Error ("no idea on how to unbox object kind " + type + " at offset " + mono_obj);
@@ -658,20 +695,20 @@ var BindingSupportLib = {
 			var unbox_buffer = this._unbox_buffer;
 			var type = this.mono_wasm_try_unbox_primitive_and_get_type (mono_obj, unbox_buffer, this._unbox_buffer_size);
 			switch (type) {
-				case 1: // int
-					return Module.HEAP32[unbox_buffer / 4];
-				case 4: // struct
-					return this._unbox_struct_rooted (unbox_buffer, mono_obj);
-				case 25: // uint32
-					return Module.HEAPU32[unbox_buffer / 4];
-				case 24: // float32
-					return Module.HEAPF32[unbox_buffer / 4];
-				case 2: // float64
-					return Module.HEAPF64[unbox_buffer / 8];
-				case 8: // boolean
-					return (Module.HEAP32[unbox_buffer / 4]) !== 0;
-				case 28: // char
-					return String.fromCharCode(Module.HEAP32[unbox_buffer / 4]);
+				case this.MARSHAL_TYPE_INT: // int
+					return Module.HEAP32[this._unbox_buffer / 4];
+				case this.MARSHAL_TYPE_VT: // struct
+					return this._unbox_struct_rooted (this._unbox_buffer, mono_obj);
+				case this.MARSHAL_TYPE_UINT32: // uint32
+					return Module.HEAPU32[this._unbox_buffer / 4];
+				case this.MARSHAL_TYPE_FP32: // float32
+					return Module.HEAPF32[this._unbox_buffer / 4];
+				case this.MARSHAL_TYPE_FP64: // float64
+					return Module.HEAPF64[this._unbox_buffer / 8];
+				case this.MARSHAL_TYPE_BOOL: // boolean
+					return (Module.HEAP32[this._unbox_buffer / 4]) !== 0;
+				case this.MARSHAL_TYPE_CHAR: // char
+					return String.fromCharCode(Module.HEAP32[this._unbox_buffer / 4]);
 				default:
 					var klass = Module.HEAPU32[unbox_buffer / 4];
 					return this._unbox_mono_obj_rooted_with_known_nonprimitive_type (mono_obj, type, klass);
@@ -1477,10 +1514,10 @@ var BindingSupportLib = {
 			};
 
 			switch (paramRecord.marshalType) {
-				case 4: // Struct
+				case this.MARSHAL_TYPE_VT: // Struct
 					result.needs_unbox = true;
 					; // FIXME: Fall-through
-				case 7: // OBJECT
+				case this.MARSHAL_TYPE_OBJECT: // OBJECT
 					var res = this._pick_automatic_converter_for_user_type (methodPtr, args_marshal, paramRecord.typePtr);
 					if (res) {
 						result.convert = res;
@@ -2149,19 +2186,19 @@ var BindingSupportLib = {
 					//  slower check-type-and-then-unbox flow which has extra checks since unbox verifies the type).
 					"    let resultType = binding_support.mono_wasm_try_unbox_primitive_and_get_type (resultPtr, unbox_buffer, unbox_buffer_size);",
 					"    switch (resultType) {",
-					"    case 1:", // int
+					`    case ${this.MARSHAL_TYPE_INT}:`, // int
 					"        result = Module.HEAP32[unbox_buffer / 4]; break;",
-					"    case 4:", // struct
+					`    case ${this.MARSHAL_TYPE_VT}:`, // struct
 					"        result = binding_support._unbox_struct_rooted (unbox_buffer, resultPtr); break;",
-					"    case 25:", // uint32
+					`    case ${this.MARSHAL_TYPE_UINT32}:`, // uint32
 					"        result = Module.HEAPU32[unbox_buffer / 4]; break;",
-					"    case 24:", // float32
+					`    case ${this.MARSHAL_TYPE_FP32}:`,
 					"        result = Module.HEAPF32[unbox_buffer / 4]; break;",
-					"    case 2:", // float64
+					`    case ${this.MARSHAL_TYPE_FP64}:`,
 					"        result = Module.HEAPF64[unbox_buffer / 8]; break;",
-					"    case 8:", // boolean
+					`    case ${this.MARSHAL_TYPE_BOOL}:`, // boolean
 					"        result = (Module.HEAP32[unbox_buffer / 4]) !== 0; break;",
-					"    case 28:", // char
+					`    case ${this.MARSHAL_TYPE_CHAR}:`, // char
 					"        result = String.fromCharCode(Module.HEAP32[unbox_buffer / 4]); break;",
 					"    default:",
 					"        var klass = Module.HEAPU32[unbox_buffer / 4];",
