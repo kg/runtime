@@ -37,6 +37,8 @@ extern void* mono_wasm_invoke_js_unmarshalled (MonoString **exceptionMessage, Mo
 
 void mono_wasm_enable_debugging (int);
 
+int mono_wasm_marshal_type_from_mono_type (int mono_type, MonoClass *klass, MonoType *type);
+
 int mono_wasm_register_root (char *start, size_t size, const char *name);
 void mono_wasm_deregister_root (char *addr);
 
@@ -52,6 +54,44 @@ int32_t monoeg_g_hasenv(const char *variable);
 void mono_free (void*);
 int32_t mini_parse_debug_option (const char *option);
 char *mono_method_get_full_name (MonoMethod *method);
+
+#define MARSHAL_TYPE_NULL 0
+#define MARSHAL_TYPE_INT 1
+#define MARSHAL_TYPE_FP64 2
+#define MARSHAL_TYPE_STRING 3
+#define MARSHAL_TYPE_VT 4
+#define MARSHAL_TYPE_DELEGATE 5
+#define MARSHAL_TYPE_TASK 6
+#define MARSHAL_TYPE_OBJECT 7
+#define MARSHAL_TYPE_BOOL 8
+#define MARSHAL_TYPE_ENUM 9
+#define MARSHAL_TYPE_URI 22
+#define MARSHAL_TYPE_SAFEHANDLE 23
+
+// typed array marshalling
+#define MARSHAL_ARRAY_BYTE 10
+#define MARSHAL_ARRAY_UBYTE 11
+#define MARSHAL_ARRAY_UBYTE_C 12
+#define MARSHAL_ARRAY_SHORT 13
+#define MARSHAL_ARRAY_USHORT 14
+#define MARSHAL_ARRAY_INT 15
+#define MARSHAL_ARRAY_UINT 16
+#define MARSHAL_ARRAY_FLOAT 17
+#define MARSHAL_ARRAY_DOUBLE 18
+
+#define MARSHAL_TYPE_FP32 24
+#define MARSHAL_TYPE_UINT32 25
+#define MARSHAL_TYPE_INT64 26
+#define MARSHAL_TYPE_UINT64 27
+#define MARSHAL_TYPE_CHAR 28
+#define MARSHAL_TYPE_STRING_INTERNED 29
+#define MARSHAL_TYPE_VOID 30
+#define MARSHAL_TYPE_POINTER 32
+
+// errors
+#define MARSHAL_ERROR_BUFFER_TOO_SMALL 512
+#define MARSHAL_ERROR_NULL_CLASS_POINTER 513
+#define MARSHAL_ERROR_NULL_TYPE_POINTER 514
 
 static MonoClass* uri_class;
 static MonoClass* task_class;
@@ -135,6 +175,91 @@ mono_wasm_invoke_js (MonoString *str, int *is_exception)
 	MonoString *res = mono_string_new_utf16 (mono_domain_get (), native_res, native_res_len);
 	free (native_res);
 	return res;
+}
+
+#define INVOKERESULT_Success 0
+#define INVOKERESULT_InvalidFunctionName 1 // null/blank name, name not interned, or syntax errror
+#define INVOKERESULT_FunctionNotFound 2 // no function found matching this function name
+#define INVOKERESULT_InvalidArgumentCount 3 // argument count outside valid range [0-3]
+#define INVOKERESULT_InvalidArgumentType 4 // an argument was of an unsupported type
+#define INVOKERESULT_MissingArgumentType 5 // an argument value was provided without a type handle
+#define INVOKERESULT_NullArgumentPointer 6 // the pointer to a non-nullable argument value was 0
+#define INVOKERESULT_InternalError 7 // an unspecified internal error occurred
+
+extern uint32_t mono_wasm_invoke_js_function_by_qualified_name_impl (
+	mono_unichar2 *internedFunctionName, int internedFunctionNameLength, uint32_t argumentCount,
+	int* marshalTypes, MonoType **typeHandles, MonoObject **arguments
+);
+
+static uint32_t
+mono_wasm_invoke_js_function_by_qualified_name (
+	MonoString *internedFunctionName, uint32_t argumentCount,
+	MonoType *type1, MonoObject *arg1,
+	MonoType *type2, MonoObject *arg2,
+	MonoType *type3, MonoObject *arg3
+) {
+	MonoString *pString = mono_string_is_interned (internedFunctionName);
+	if (!internedFunctionName || pString != internedFunctionName)
+		return INVOKERESULT_InvalidFunctionName;
+
+	if (argumentCount > 3)
+		return INVOKERESULT_InvalidArgumentCount;
+
+	mono_unichar2 *native_val = mono_string_chars (pString);
+	int native_len = mono_string_length (pString) * 2;
+	if (native_len < 1)
+		return INVOKERESULT_InvalidFunctionName;
+	
+	int *marshalTypes = g_new0 (int, argumentCount);
+	MonoType **typeHandles = g_new0 (MonoType *, argumentCount);
+	MonoObject **arguments = g_new0 (MonoObject *, argumentCount);
+
+	if (argumentCount > 0) {
+		typeHandles[0] = type1;
+		arguments[0] = arg1;
+	}
+	if (argumentCount > 1) {
+		typeHandles[1] = type2;
+		arguments[1] = arg2;
+	}
+	if (argumentCount > 2) {
+		typeHandles[2] = type3;
+		arguments[2] = arg3;
+	}
+
+	uint32_t result = 0;
+	MonoClass *klass;
+	int mono_type;
+
+	for (uint32_t i = 0; i < argumentCount; i++) {
+		if (typeHandles[i] == 0) {
+			result = INVOKERESULT_MissingArgumentType;
+			break;
+		}
+
+		klass = mono_class_from_mono_type (typeHandles[i]);
+		mono_type = mono_type_get_type (typeHandles[i]);
+		marshalTypes[i] = mono_wasm_marshal_type_from_mono_type (mono_type, klass, typeHandles[i]);
+		if (marshalTypes[i] >= MARSHAL_ERROR_BUFFER_TOO_SMALL) {
+			result = INVOKERESULT_InvalidArgumentType;
+			break;
+		}
+
+		// TODO: INVOKERESULT_NullArgumentPointer
+	}
+	
+	if (result == 0) {
+		result = mono_wasm_invoke_js_function_by_qualified_name_impl (
+			native_val, native_len, argumentCount,
+			marshalTypes, typeHandles, arguments
+		);
+	}
+
+	free(marshalTypes);
+	free(typeHandles);
+	free(arguments);
+
+	return result;
 }
 
 static void
@@ -446,6 +571,8 @@ void mono_initialize_internals ()
 	// The following two are for back-compat and will eventually be removed
 	mono_add_internal_call ("WebAssembly.JSInterop.InternalCalls::InvokeJSMarshalled", mono_wasm_invoke_js_marshalled);
 	mono_add_internal_call ("WebAssembly.JSInterop.InternalCalls::InvokeJSUnmarshalled", mono_wasm_invoke_js_unmarshalled);
+
+	mono_add_internal_call ("Interop/Runtime::InvokeJSFunction", mono_wasm_invoke_js_function_by_qualified_name);
 
 #ifdef CORE_BINDINGS
 	core_initialize_internals();
@@ -779,45 +906,6 @@ MonoClass* mono_get_uri_class(MonoException** exc)
 	MonoClass* klass = mono_wasm_assembly_find_class(assembly, "System", "Uri");
 	return klass;
 }
-
-#define MARSHAL_TYPE_NULL 0
-#define MARSHAL_TYPE_INT 1
-#define MARSHAL_TYPE_FP64 2
-#define MARSHAL_TYPE_STRING 3
-#define MARSHAL_TYPE_VT 4
-#define MARSHAL_TYPE_DELEGATE 5
-#define MARSHAL_TYPE_TASK 6
-#define MARSHAL_TYPE_OBJECT 7
-#define MARSHAL_TYPE_BOOL 8
-#define MARSHAL_TYPE_ENUM 9
-#define MARSHAL_TYPE_URI 22
-#define MARSHAL_TYPE_SAFEHANDLE 23
-
-// typed array marshalling
-#define MARSHAL_ARRAY_BYTE 10
-#define MARSHAL_ARRAY_UBYTE 11
-#define MARSHAL_ARRAY_UBYTE_C 12
-#define MARSHAL_ARRAY_SHORT 13
-#define MARSHAL_ARRAY_USHORT 14
-#define MARSHAL_ARRAY_INT 15
-#define MARSHAL_ARRAY_UINT 16
-#define MARSHAL_ARRAY_FLOAT 17
-#define MARSHAL_ARRAY_DOUBLE 18
-
-#define MARSHAL_TYPE_FP32 24
-#define MARSHAL_TYPE_UINT32 25
-#define MARSHAL_TYPE_INT64 26
-#define MARSHAL_TYPE_UINT64 27
-#define MARSHAL_TYPE_CHAR 28
-#define MARSHAL_TYPE_STRING_INTERNED 29
-#define MARSHAL_TYPE_VOID 30
-#define MARSHAL_TYPE_POINTER 32
-
-// errors
-#define MARSHAL_ERROR_BUFFER_TOO_SMALL 512
-#define MARSHAL_ERROR_NULL_CLASS_POINTER 513
-#define MARSHAL_ERROR_NULL_TYPE_POINTER 514
-#define MARSHAL_ERROR_UNSUPPORTED_TYPE 515
 
 void mono_wasm_ensure_classes_resolved ()
 {
@@ -1360,91 +1448,6 @@ mono_wasm_get_class_for_bind_or_invoke (MonoObject *this_arg, MonoMethod *method
 EMSCRIPTEN_KEEPALIVE char * 
 mono_wasm_get_type_name (MonoType * typePtr) {
 	return mono_type_get_name_full (typePtr, MONO_TYPE_NAME_FORMAT_REFLECTION);
-}
-
-#define INVOKERESULT_Success 0
-#define INVOKERESULT_InvalidFunctionName 1 // null/blank name, name not interned, or syntax errror
-#define INVOKERESULT_FunctionNotFound 2 // no function found matching this function name
-#define INVOKERESULT_InvalidArgumentCount 3 // argument count outside valid range [0-3]
-#define INVOKERESULT_InvalidArgumentType 4 // an argument was of an unsupported type
-#define INVOKERESULT_MissingArgumentType 5 // an argument value was provided without a type handle
-#define INVOKERESULT_NullArgumentPointer 6 // the pointer to a non-nullable argument value was 0
-#define INVOKERESULT_InternalError 7 // an unspecified internal error occurred
-
-extern uint32_t mono_wasm_invoke_js_function_by_qualified_name_impl (
-	mono_unichar2 *internedFunctionName, int internedFunctionNameLength, uint32_t argumentCount,
-	int** marshalTypes, MonoType **typeHandles, MonoObject **arguments
-);
-
-static uint32_t
-mono_wasm_invoke_js_function_by_qualified_name (
-	MonoString *internedFunctionName, uint32_t argumentCount,
-	MonoType *type1, MonoObject *arg1,
-	MonoType *type2, MonoObject *arg2,
-	MonoType *type3, MonoObject *arg3
-) {
-	MonoString *pString = mono_string_is_interned (internedFunctionName);
-	if (!internedFunctionName || pString != internedFunctionName)
-		return INVOKERESULT_InvalidFunctionName;
-
-	if (argumentCount > 3)
-		return INVOKERESULT_InvalidArgumentCount;
-
-	mono_unichar2 *native_val = mono_string_chars (pString);
-	int native_len = mono_string_length (pString) * 2;
-	if (native_len < 1)
-		return INVOKERESULT_InvalidFunctionName;
-	
-	int **marshalTypes = g_new0 (int *, argumentCount);
-	MonoType **typeHandles = g_new0 (MonoType *, argumentCount);
-	MonoObject **arguments = g_new0 (MonoObject *, argumentCount);
-
-	if (argumentCount > 0) {
-		typeHandles[0] = type1;
-		arguments[0] = arg1;
-	}
-	if (argumentCount > 1) {
-		typeHandles[1] = type2;
-		arguments[1] = arg2;
-	}
-	if (argumentCount > 2) {
-		typeHandles[2] = type3;
-		arguments[2] = arg3;
-	}
-
-	uint32_t result = 0;
-	MonoClass *klass;
-	int mono_type;
-
-	for (uint32_t i = 0; i < argumentCount; i++) {
-		if (typeHandles[i] == 0) {
-			result = INVOKERESULT_MissingArgumentType;
-			break;
-		}
-
-		klass = mono_class_from_mono_type (typeHandles[i]);
-		mono_type = mono_type_get_type (typeHandles[i]);
-		marshalTypes[i] = mono_wasm_marshal_type_from_mono_type (mono_type, klass, typeHandles[i]);
-		if (marshalTypes[i] >= MARSHAL_ERROR_BUFFER_TOO_SMALL) {
-			result = INVOKERESULT_InvalidArgumentType;
-			break;
-		}
-
-		// TODO: INVOKERESULT_NullArgumentPointer
-	}
-	
-	if (result == 0) {
-		result = mono_wasm_invoke_js_function_by_qualified_name_impl (
-			native_val, native_len, argumentCount,
-			marshalTypes, typeHandles, arguments
-		);
-	}
-
-	free(marshalTypes);
-	free(typeHandles);
-	free(arguments);
-
-	return result;
 }
 
 EMSCRIPTEN_KEEPALIVE char * 

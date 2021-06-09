@@ -52,6 +52,14 @@ internal static partial class Interop
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         internal static extern object TypedArrayCopyFrom(int jsObjHandle, int arrayPtr, int begin, int end, int bytesPerElement, out int exceptionalResult);
 
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal static extern UInt32 InvokeJSFunction(
+            string internedFunctionName, UInt32 argumentCount,
+            RuntimeTypeHandle type1, IntPtr arg1,
+            RuntimeTypeHandle type2, IntPtr arg2,
+            RuntimeTypeHandle type3, IntPtr arg3
+        );
+
         // / <summary>
         // / Execute the provided string in the JavaScript context
         // / </summary>
@@ -63,6 +71,16 @@ internal static partial class Interop
             if (exception != 0)
                 throw new JSException(res);
             return res;
+        }
+
+        public static UInt32 InvokeJSFunctionByName (string internedFunctionName) {
+            RuntimeTypeHandle noHandle = default;
+            return InvokeJSFunction(
+                internedFunctionName, 0,
+                noHandle, IntPtr.Zero,
+                noHandle, IntPtr.Zero,
+                noHandle, IntPtr.Zero
+            );
         }
 
         public static System.Runtime.InteropServices.JavaScript.Function? CompileFunction(string snippet)

@@ -11,6 +11,17 @@ using System.Threading.Tasks;
 
 namespace System.Runtime.InteropServices.JavaScript
 {
+    public enum InvokeJSResult : uint {
+        Success = 0,
+        InvalidFunctionName,
+        FunctionNotFound,
+        InvalidArgumentCount,
+        InvalidArgumentType,
+        MissingArgumentType,
+        NullArgumentPointer,
+        InternalError
+    }
+
     public static class Runtime
     {
         private static readonly Dictionary<int, WeakReference<JSObject>> _boundObjects = new Dictionary<int, WeakReference<JSObject>>();
@@ -32,6 +43,10 @@ namespace System.Runtime.InteropServices.JavaScript
         public static string InvokeJS(string str)
         {
             return Interop.Runtime.InvokeJS(str);
+        }
+
+        public static InvokeJSResult InvokeJSFunctionByName (string internedFunctionName) {
+            return Interop.Runtime.InvokeJSFunctionByName(internedFunctionName);
         }
 
         public static Function? CompileFunction(string snippet)
