@@ -275,28 +275,26 @@ var BindingSupportLib = {
 				return 0;
 			}
 
-			// TODO: Pointers
 			switch (marshalType) {
-				case this.MARSHAL_TYPE_INT: // int
+				case this.MARSHAL_TYPE_INT:
 					output[index] = Module.HEAP32[pData / 4];
 					return 0;
-				case this.MARSHAL_TYPE_VT: // struct
-					// FIXME
+				case this.MARSHAL_TYPE_VT:
 					output[index] = this._unbox_struct_rooted_from_address (pData, typeHandle);
 					return 0;
-				case this.MARSHAL_TYPE_UINT32: // uint32
+				case this.MARSHAL_TYPE_UINT32:
 					output[index] = Module.HEAPU32[pData / 4];
 					return 0;
-				case this.MARSHAL_TYPE_FP32: // float32
+				case this.MARSHAL_TYPE_FP32:
 					output[index] = Module.HEAPF32[pData / 4];
 					return 0;
-				case this.MARSHAL_TYPE_FP64: // float64
+				case this.MARSHAL_TYPE_FP64:
 					output[index] = Module.HEAPF64[pData / 8];
 					return 0;
-				case this.MARSHAL_TYPE_BOOL: // boolean
+				case this.MARSHAL_TYPE_BOOL:
 					output[index] = (Module.HEAP32[pData / 4]) !== 0;
 					return 0;
-				case this.MARSHAL_TYPE_CHAR: // char
+				case this.MARSHAL_TYPE_CHAR:
 					output[index] = String.fromCharCode(Module.HEAP32[pData / 4]);
 					return 0;
 				case this.MARSHAL_TYPE_DELEGATE:
@@ -322,7 +320,7 @@ var BindingSupportLib = {
 			}
 		},
 
-		_perform_invoke_js_function: function (
+		_unbox_arguments_and_invoke_js_function: function (
 			fn, argumentCount,
 			pMarshalTypes, pTypeHandles, pArguments
 		) {
@@ -365,7 +363,7 @@ var BindingSupportLib = {
 			if (typeof (fn) !== "function")
 				return fn;
 
-			var result = this._perform_invoke_js_function(
+			var result = this._unbox_arguments_and_invoke_js_function(
 				fn, argumentCount, 
 				pMarshalTypes, pTypeHandles, pArguments
 			);
@@ -742,19 +740,19 @@ var BindingSupportLib = {
 			var unbox_buffer = this._unbox_buffer;
 			var type = this.mono_wasm_try_unbox_primitive_and_get_type (mono_obj, unbox_buffer, this._unbox_buffer_size);
 			switch (type) {
-				case this.MARSHAL_TYPE_INT: // int
+				case this.MARSHAL_TYPE_INT:
 					return Module.HEAP32[this._unbox_buffer / 4];
-				case this.MARSHAL_TYPE_VT: // struct
+				case this.MARSHAL_TYPE_VT:
 					return this._unbox_struct_rooted (this._unbox_buffer, mono_obj);
-				case this.MARSHAL_TYPE_UINT32: // uint32
+				case this.MARSHAL_TYPE_UINT32:
 					return Module.HEAPU32[this._unbox_buffer / 4];
-				case this.MARSHAL_TYPE_FP32: // float32
+				case this.MARSHAL_TYPE_FP32:
 					return Module.HEAPF32[this._unbox_buffer / 4];
-				case this.MARSHAL_TYPE_FP64: // float64
+				case this.MARSHAL_TYPE_FP64:
 					return Module.HEAPF64[this._unbox_buffer / 8];
-				case this.MARSHAL_TYPE_BOOL: // boolean
+				case this.MARSHAL_TYPE_BOOL:
 					return (Module.HEAP32[this._unbox_buffer / 4]) !== 0;
-				case this.MARSHAL_TYPE_CHAR: // char
+				case this.MARSHAL_TYPE_CHAR:
 					return String.fromCharCode(Module.HEAP32[this._unbox_buffer / 4]);
 				default:
 					var klass = Module.HEAPU32[unbox_buffer / 4];
@@ -2232,19 +2230,19 @@ var BindingSupportLib = {
 					//  slower check-type-and-then-unbox flow which has extra checks since unbox verifies the type).
 					"    let resultType = binding_support.mono_wasm_try_unbox_primitive_and_get_type (resultPtr, unbox_buffer, unbox_buffer_size);",
 					"    switch (resultType) {",
-					`    case ${this.MARSHAL_TYPE_INT}:`, // int
+					`    case ${this.MARSHAL_TYPE_INT}:`,
 					"        result = Module.HEAP32[unbox_buffer / 4]; break;",
-					`    case ${this.MARSHAL_TYPE_VT}:`, // struct
+					`    case ${this.MARSHAL_TYPE_VT}:`,
 					"        result = binding_support._unbox_struct_rooted (unbox_buffer, resultPtr); break;",
-					`    case ${this.MARSHAL_TYPE_UINT32}:`, // uint32
+					`    case ${this.MARSHAL_TYPE_UINT32}:`,
 					"        result = Module.HEAPU32[unbox_buffer / 4]; break;",
 					`    case ${this.MARSHAL_TYPE_FP32}:`,
 					"        result = Module.HEAPF32[unbox_buffer / 4]; break;",
 					`    case ${this.MARSHAL_TYPE_FP64}:`,
 					"        result = Module.HEAPF64[unbox_buffer / 8]; break;",
-					`    case ${this.MARSHAL_TYPE_BOOL}:`, // boolean
+					`    case ${this.MARSHAL_TYPE_BOOL}:`,
 					"        result = (Module.HEAP32[unbox_buffer / 4]) !== 0; break;",
-					`    case ${this.MARSHAL_TYPE_CHAR}:`, // char
+					`    case ${this.MARSHAL_TYPE_CHAR}:`,
 					"        result = String.fromCharCode(Module.HEAP32[unbox_buffer / 4]); break;",
 					"    default:",
 					"        var klass = Module.HEAPU32[unbox_buffer / 4];",
