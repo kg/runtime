@@ -1445,6 +1445,20 @@ var BindingSupportLib = {
 		},
 
 		_unbox_struct_rooted_from_address: function (dataOffset, typePtr) {
+			if (!dataOffset)
+				throw new Error("Address of struct data was null");
+			else if (!typePtr)
+				throw new Error("Type of struct data was null");
+
+			var unboxer = this._get_struct_unboxer_for_type(typePtr);
+			if (!unboxer)
+				throw new Error (`No CustomJavaScriptMarshaler found for struct type ${this._get_type_name(typePtr)}`);
+
+			// FIXME: Pass a ReadOnlySpan or ReadOnlyMemory instead of a bare pointer
+			return unboxer (dataOffset);
+		},
+
+		_unbox_struct_rooted: function (unbox_buffer, mono_obj) {
 			// TODO: Solve this by using a temporary unbox buffer, or using a different spot in the unbox buffer
 			if (this._is_unboxing_struct && (this._unbox_buffer === unbox_buffer))
 				throw new Error("Re-entrant struct unboxing detected. This is not currently supported.");
@@ -1461,12 +1475,8 @@ var BindingSupportLib = {
 					throw new Error(`classPtr for struct obj at address ${mono_obj} is null or undefined`);
 				}
 
-				var unboxer = this._get_struct_unboxer_for_type(typePtr);
-				if (!unboxer)
-					throw new Error (`No CustomJavaScriptMarshaler found for struct type ${this._get_type_name(typePtr)}`);
-
-				// FIXME: Pass a ReadOnlySpan or ReadOnlyMemory instead of a bare pointer
-				return unboxer (dataOffset);
+				var typePtr = this.mono_wasm_class_get_type(classPtr);
+				return this._unbox_struct_rooted_from_address(dataOffset, typePtr);
 			} finally {
 				this._is_unboxing_struct = false;
 			}
