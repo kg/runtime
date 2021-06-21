@@ -1060,6 +1060,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             Assert.StartsWith("Error: No CustomJavaScriptMarshaler found for struct type System.Threading.Tasks.ValueTask`1[System.Int32]", exc.Message);
         }
         
+        [Fact]
         public static void InvokeByNameBasic()
         {
             HelperMarshal._stringResource = null;

@@ -741,19 +741,19 @@ var BindingSupportLib = {
 			var type = this.mono_wasm_try_unbox_primitive_and_get_type (mono_obj, unbox_buffer, this._unbox_buffer_size);
 			switch (type) {
 				case this.MARSHAL_TYPE_INT:
-					return Module.HEAP32[this._unbox_buffer / 4];
+					return Module.HEAP32[unbox_buffer / 4];
 				case this.MARSHAL_TYPE_VT:
-					return this._unbox_struct_rooted (this._unbox_buffer, mono_obj);
+					return this._unbox_struct_rooted (unbox_buffer, mono_obj);
 				case this.MARSHAL_TYPE_UINT32:
-					return Module.HEAPU32[this._unbox_buffer / 4];
+					return Module.HEAPU32[unbox_buffer / 4];
 				case this.MARSHAL_TYPE_FP32:
-					return Module.HEAPF32[this._unbox_buffer / 4];
+					return Module.HEAPF32[unbox_buffer / 4];
 				case this.MARSHAL_TYPE_FP64:
-					return Module.HEAPF64[this._unbox_buffer / 8];
+					return Module.HEAPF64[unbox_buffer / 8];
 				case this.MARSHAL_TYPE_BOOL:
-					return (Module.HEAP32[this._unbox_buffer / 4]) !== 0;
+					return (Module.HEAP32[unbox_buffer / 4]) !== 0;
 				case this.MARSHAL_TYPE_CHAR:
-					return String.fromCharCode(Module.HEAP32[this._unbox_buffer / 4]);
+					return String.fromCharCode(Module.HEAP32[unbox_buffer / 4]);
 				default:
 					var klass = Module.HEAPU32[unbox_buffer / 4];
 					return this._unbox_mono_obj_rooted_with_known_nonprimitive_type (mono_obj, type, klass);
