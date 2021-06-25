@@ -27,6 +27,7 @@ var BindingSupportLib = {
 			module ["mono_call_assembly_entry_point"] = BINDING.call_assembly_entry_point.bind(BINDING);
 			module ["mono_intern_string"] = BINDING.mono_intern_string.bind(BINDING);
 			module ["mono_wasm_invoke_js_function_by_qualified_name_impl"] = BINDING._invoke_js_function_by_qualified_name_impl.bind(BINDING);
+			module ["_JSObject_Invoke"] = BINDING._JSObject_Invoke.bind(BINDING);
 		},
 
 		bindings_lazy_init: function () {
@@ -240,8 +241,9 @@ var BindingSupportLib = {
 				this._invoke_js_function_cache.set(pInternedFunctionName, fn);
 			}
 
-			if (typeof (fn) !== "function")
+			if (typeof (fn) !== "function") {
 				return this.INVOKERESULT_FunctionNotFound;
+			}
 			
 			return fn;
 		},
@@ -257,7 +259,7 @@ var BindingSupportLib = {
 						return link;
 
 					var nextLink = link[parts[i]];
-					console.log(link, parts[i], "->", nextLink);
+					// console.log(link, parts[i], "->", nextLink);
 					link = nextLink;
 				}
 				return link;
@@ -275,6 +277,8 @@ var BindingSupportLib = {
 				return 0;
 			}
 
+			// console.log(`index=${index}, marshalType=${marshalType}, typeHandle=${typeHandle}, pData=${pData}`);
+
 			switch (marshalType) {
 				case this.MARSHAL_TYPE_INT:
 					output[index] = Module.HEAP32[pData / 4];
@@ -282,7 +286,8 @@ var BindingSupportLib = {
 				case this.MARSHAL_TYPE_VT:
 					output[index] = this._unbox_struct_rooted_from_address (pData, typeHandle);
 					return 0;
-				case this.MARSHAL_TYPE_UINT32:
+					case this.MARSHAL_TYPE_POINTER:
+						case this.MARSHAL_TYPE_UINT32:
 					output[index] = Module.HEAPU32[pData / 4];
 					return 0;
 				case this.MARSHAL_TYPE_FP32:
@@ -344,7 +349,7 @@ var BindingSupportLib = {
 			try {
 				invokeResult = fn.apply(null, jsArguments);
 			} catch (exc) {
-				console.error("invoked function threw unhandled error", exc);
+				console.error("invoked function threw unhandled error", exc, "at", exc.stack);
 				return this.INVOKERESULT_FunctionThrewException;
 			}
 
@@ -354,11 +359,38 @@ var BindingSupportLib = {
 				return this.INVOKERESULT_Success;
 		},
 
+		_JSObject_Invoke: function (js_handle, method_name, pRecord) {
+			console.log("_JSObject_Invoke", js_handle, method_name, pRecord);
+			var objArguments = Module.HEAPU32[pRecord / 4];
+			var pResult = pRecord + 4;
+
+			var obj = BINDING.get_js_obj (js_handle);
+			if (!obj)
+				throw new Error(`invalid js object handle ${js_handle}`);
+
+			var method = obj[method_name];
+			if (typeof (method) !== "function")
+				throw new Error(`member ${method_name} of object was not a function`);
+
+			BINDING.mono_wasm_save_LMF();
+			
+			try {
+				var args = BINDING.mono_array_to_js_array(objArguments);
+				var jsResult = method.apply(obj, args);
+				var pObj = BINDING.js_to_mono_obj(jsResult);
+				Module.HEAPU32[pResult / 4] = pObj;
+			} finally {
+				BINDING.mono_wasm_unwind_LMF();
+			}
+		},
+	
 		_invoke_js_function_by_qualified_name_impl: function (
 			pInternedFunctionName, argumentCount,
 			pMarshalTypes, pTypeHandles, pArguments
 		) {
-			console.log(pInternedFunctionName, argumentCount);
+			BINDING.bindings_lazy_init ();
+			
+			// console.log(pInternedFunctionName, argumentCount);
 			var fn = this._resolve_js_function_by_qualified_name(pInternedFunctionName);
 			if (typeof (fn) !== "function")
 				return fn;
@@ -2529,6 +2561,8 @@ var BindingSupportLib = {
 
 		var js_args = BINDING.mono_wasm_parse_args(args);
 
+		console.log("invoke_js_with_args", js_handle, method_name, js_args);
+
 		var res;
 		try {
 			var m = obj [js_name];
@@ -2814,8 +2848,6 @@ var BindingSupportLib = {
 		var res = BINDING.typedarray_copy_from(requireObject, pinned_array, begin, end, bytes_per_element);
 		return BINDING.js_to_mono_obj (res)
 	},
-
-
 };
 
 autoAddDeps(BindingSupportLib, '$BINDING')

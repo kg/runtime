@@ -3,6 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Console = System.Diagnostics.Debug;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace System.Runtime.InteropServices.JavaScript
 {
@@ -49,6 +51,12 @@ namespace System.Runtime.InteropServices.JavaScript
             WeakRawObject = new WeakReference<Delegate>(rawDelegate, trackResurrection: false);
         }
 
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        private struct InvokeRecord {
+            public object?[] Arguments;
+            public object? Result;
+        }
+
         /// <summary>
         ///   Invoke a named method of the object, or throws a JSException on error.
         /// </summary>
@@ -68,12 +76,37 @@ namespace System.Runtime.InteropServices.JavaScript
         ///     valuews.
         ///   </para>
         /// </returns>
-        public object Invoke(string method, params object?[] args)
+        // FIXME: This should be object?, but if we correct it lots of stuff breaks
+        public unsafe object Invoke(string method, params object?[] args)
         {
+            int handle = JSHandle;
+            var pinName = GCHandle.Alloc(method, GCHandleType.Normal);
+            var pinArgs = GCHandle.Alloc(args, GCHandleType.Normal);
+            var record = new InvokeRecord {
+                Arguments = args,
+                Result = null
+            };
+            var invokeResult = Interop.Runtime.InvokeJSFunction(
+                "BINDING._JSObject_Invoke", 3,
+                typeof(int).TypeHandle.Value, (IntPtr)Unsafe.AsPointer(ref handle),
+                typeof(string).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref method),
+                typeof(void*).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref record)
+            );
+            pinName.Free();
+            pinArgs.Free();
+            if (invokeResult != 0)
+                throw new Exception($"Invoke result was {invokeResult}");
+
+            if (record.Result == null)
+                return "<null>";
+            else
+                return record.Result;
+            /*
             object res = Interop.Runtime.InvokeJSWithArgs(JSHandle, method, args, out int exception);
             if (exception != 0)
                 throw new JSException((string)res);
             return res;
+            */
         }
 
         /// <summary>
