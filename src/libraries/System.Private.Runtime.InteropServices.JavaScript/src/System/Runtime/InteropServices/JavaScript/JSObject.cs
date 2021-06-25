@@ -79,19 +79,16 @@ namespace System.Runtime.InteropServices.JavaScript
         // FIXME: This should be object?, but if we correct it lots of stuff breaks
         public unsafe object Invoke(string method, params object?[] args)
         {
-            int handle = JSHandle;
             var pinName = GCHandle.Alloc(method, GCHandleType.Normal);
             var pinArgs = GCHandle.Alloc(args, GCHandleType.Normal);
             var record = new InvokeRecord {
                 Arguments = args,
                 Result = null
             };
-            var pArgs = *(IntPtr*)Unsafe.AsPointer(ref args);
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
-            // Console.WriteLine($"pRecord=={pRecord}, args.Length=={args?.Length ?? 0}, aspointer(args)=={pArgs}");
             var invokeResult = Interop.Runtime.InvokeJSFunction(
                 "BINDING._JSObject_Invoke", 3,
-                typeof(int).TypeHandle.Value, (IntPtr)Unsafe.AsPointer(ref handle),
+                typeof(void*).TypeHandle.Value, (IntPtr)JSHandle,
                 typeof(string).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref method),
                 typeof(void*).TypeHandle.Value, pRecord
             );
@@ -99,17 +96,10 @@ namespace System.Runtime.InteropServices.JavaScript
             pinArgs.Free();
             if (invokeResult != 0)
                 throw new Exception($"Invoke result was {invokeResult}");
-
-            if (record.Result == null)
+            else if (record.Result == null)
                 return "<null>";
             else
                 return record.Result;
-            /*
-            object res = Interop.Runtime.InvokeJSWithArgs(JSHandle, method, args, out int exception);
-            if (exception != 0)
-                throw new JSException((string)res);
-            return res;
-            */
         }
 
         /// <summary>

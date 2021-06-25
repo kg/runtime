@@ -351,7 +351,7 @@ var BindingSupportLib = {
 			try {
 				invokeResult = fn.apply(null, jsArguments);
 			} catch (exc) {
-				console.error("invoked function threw unhandled error", exc, "at", exc.stack);
+				console.error("invoked function threw unhandled error", exc);
 				return this.INVOKERESULT_FunctionThrewException;
 			}
 
@@ -362,7 +362,6 @@ var BindingSupportLib = {
 		},
 
 		_JSObject_Invoke: function (js_handle, method_name, pRecord) {
-			// console.log("_JSObject_Invoke", js_handle, method_name, pRecord);
 			var objArguments = Module.HEAPU32[pRecord / 4];
 			var pResult = pRecord + 4;
 
@@ -377,9 +376,7 @@ var BindingSupportLib = {
 			BINDING.mono_wasm_save_LMF();
 			
 			try {
-				// console.error(`js pRecord=${pRecord}, args=${objArguments}`);
 				var args = BINDING.mono_array_to_js_array(objArguments);
-				// console.error(`args.length === ${(args || []).length}`);
 				var jsResult = method.apply(obj, args);
 				var pObj = BINDING.js_to_mono_obj(jsResult);
 				Module.HEAPU32[pResult / 4] = pObj;
