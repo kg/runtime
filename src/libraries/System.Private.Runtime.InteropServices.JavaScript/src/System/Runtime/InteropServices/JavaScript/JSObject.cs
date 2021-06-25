@@ -86,11 +86,14 @@ namespace System.Runtime.InteropServices.JavaScript
                 Arguments = args,
                 Result = null
             };
+            var pArgs = *(IntPtr*)Unsafe.AsPointer(ref args);
+            var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
+            // Console.WriteLine($"pRecord=={pRecord}, args.Length=={args?.Length ?? 0}, aspointer(args)=={pArgs}");
             var invokeResult = Interop.Runtime.InvokeJSFunction(
                 "BINDING._JSObject_Invoke", 3,
                 typeof(int).TypeHandle.Value, (IntPtr)Unsafe.AsPointer(ref handle),
                 typeof(string).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref method),
-                typeof(void*).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref record)
+                typeof(void*).TypeHandle.Value, pRecord
             );
             pinName.Free();
             pinArgs.Free();
