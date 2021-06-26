@@ -88,9 +88,9 @@ namespace System.Runtime.InteropServices.JavaScript
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
             var invokeResult = Interop.Runtime.InvokeJSFunction(
                 "BINDING._JSObject_Invoke", 3,
-                typeof(void*).TypeHandle.Value, (IntPtr)JSHandle,
+                typeof(IntPtr).TypeHandle.Value, (IntPtr)JSHandle,
                 typeof(string).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref method),
-                typeof(void*).TypeHandle.Value, pRecord
+                typeof(IntPtr).TypeHandle.Value, pRecord
             );
             pinName.Free();
             pinArgs.Free();

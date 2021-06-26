@@ -948,6 +948,7 @@ mono_wasm_marshal_type_from_mono_type (int mono_type, MonoClass *klass, MonoType
 		return MARSHAL_TYPE_VOID;
 	case MONO_TYPE_BOOLEAN:
 		return MARSHAL_TYPE_BOOL;
+	case MONO_TYPE_I:	// IntPtr
 	case MONO_TYPE_PTR:
 		return MARSHAL_TYPE_POINTER;
 	case MONO_TYPE_I1:
@@ -955,7 +956,6 @@ mono_wasm_marshal_type_from_mono_type (int mono_type, MonoClass *klass, MonoType
 	case MONO_TYPE_I2:
 	case MONO_TYPE_U2:
 	case MONO_TYPE_I4:
-	case MONO_TYPE_I:	// IntPtr
 		return MARSHAL_TYPE_INT;
 	case MONO_TYPE_CHAR:
 		return MARSHAL_TYPE_CHAR;

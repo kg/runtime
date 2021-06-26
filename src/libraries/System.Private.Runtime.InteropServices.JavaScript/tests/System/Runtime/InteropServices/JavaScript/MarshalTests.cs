@@ -1230,5 +1230,15 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
                 )
             );
         }
+
+        [Fact]
+        public static void JSObjectInvokeProperlyRethrowsExceptions() {
+            Runtime.InvokeJS(
+                "globalThis.testObj1 = { throwingMethod: function () { throw new Error('test'); } }; "
+            );
+            var o = (JSObject)Runtime.GetGlobalObject("testObj1");
+            var res = o.Invoke("throwingMethod");
+            Assert.Equal("test", res);
+        }
     }
 }

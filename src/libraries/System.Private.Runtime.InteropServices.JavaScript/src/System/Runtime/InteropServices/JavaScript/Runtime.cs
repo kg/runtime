@@ -72,7 +72,7 @@ namespace System.Runtime.InteropServices.JavaScript
 
         private static unsafe IntPtr GetAddressOfInvokeArgument<T> (ref T arg, out GCHandle pin) {
             pin = default(GCHandle);
-            if (typeof(T).IsPointer) {
+            if (typeof(T).IsPointer || typeof(T) == typeof(IntPtr) || typeof(T) == typeof(UIntPtr)) {
                 // HACK: This is a raw pointer, we want to get the actual pointer (instead of the
                 //  address of the pointer in memory) and pass that to the callee
                 return *(IntPtr*)Unsafe.AsPointer(ref arg);

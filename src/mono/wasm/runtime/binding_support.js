@@ -774,6 +774,7 @@ var BindingSupportLib = {
 			var type = this.mono_wasm_try_unbox_primitive_and_get_type (mono_obj, unbox_buffer, this._unbox_buffer_size);
 			switch (type) {
 				case this.MARSHAL_TYPE_INT:
+				case this.MARSHAL_TYPE_POINTER:
 					return Module.HEAP32[unbox_buffer / 4];
 				case this.MARSHAL_TYPE_VT:
 					return this._unbox_struct_rooted (unbox_buffer, mono_obj);
@@ -2274,6 +2275,7 @@ var BindingSupportLib = {
 					"    let resultType = binding_support.mono_wasm_try_unbox_primitive_and_get_type (resultPtr, unbox_buffer, unbox_buffer_size);",
 					"    switch (resultType) {",
 					`    case ${this.MARSHAL_TYPE_INT}:`,
+					`    case ${this.MARSHAL_TYPE_POINTER}:`,
 					"        result = Module.HEAP32[unbox_buffer / 4]; break;",
 					`    case ${this.MARSHAL_TYPE_VT}:`,
 					"        result = binding_support._unbox_struct_rooted (unbox_buffer, resultPtr); break;",
@@ -2562,7 +2564,7 @@ var BindingSupportLib = {
 
 		var js_args = BINDING.mono_wasm_parse_args(args);
 
-		console.log("invoke_js_with_args", js_handle, method_name, js_args);
+		// console.log("invoke_js_with_args", js_handle, method_name, js_args);
 
 		var res;
 		try {
