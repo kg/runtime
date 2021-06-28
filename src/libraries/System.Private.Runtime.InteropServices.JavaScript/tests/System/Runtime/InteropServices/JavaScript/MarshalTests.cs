@@ -1237,8 +1237,10 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
                 "globalThis.testObj1 = { throwingMethod: function () { throw new Error('test'); } }; "
             );
             var o = (JSObject)Runtime.GetGlobalObject("testObj1");
-            var res = o.Invoke("throwingMethod");
-            Assert.Equal("test", res);
+            var exc = Assert.Throws<System.Runtime.InteropServices.JavaScript.JSException>(() => {
+                var res = o.Invoke("throwingMethod");
+            });
+            Assert.Equal("test", exc.Message);
         }
     }
 }

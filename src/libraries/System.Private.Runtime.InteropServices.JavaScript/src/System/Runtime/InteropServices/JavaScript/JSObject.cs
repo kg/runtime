@@ -55,6 +55,8 @@ namespace System.Runtime.InteropServices.JavaScript
         private struct InvokeRecord {
             public object?[] Arguments;
             public object? Result;
+            public string? ErrorMessage;
+            public string? ErrorStack;
         }
 
         /// <summary>
@@ -82,8 +84,7 @@ namespace System.Runtime.InteropServices.JavaScript
             var pinName = GCHandle.Alloc(method, GCHandleType.Normal);
             var pinArgs = GCHandle.Alloc(args, GCHandleType.Normal);
             var record = new InvokeRecord {
-                Arguments = args,
-                Result = null
+                Arguments = args
             };
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
             var invokeResult = Interop.Runtime.InvokeJSFunction(
@@ -96,7 +97,10 @@ namespace System.Runtime.InteropServices.JavaScript
             pinArgs.Free();
             if (invokeResult != 0)
                 throw new Exception($"Invoke result was {invokeResult}");
+            else if (record.ErrorMessage != null)
+                throw new JSException(record.ErrorMessage, record.ErrorStack);
             else if (record.Result == null)
+                // FIXME: Our return type should really be object?
                 return "<null>";
             else
                 return record.Result;

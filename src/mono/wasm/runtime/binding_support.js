@@ -362,8 +362,9 @@ var BindingSupportLib = {
 		},
 
 		_JSObject_Invoke: function (js_handle, method_name, pRecord) {
-			var objArguments = Module.HEAPU32[pRecord / 4];
-			var pResult = pRecord + 4;
+			let pRecord32 = (pRecord / 4) | 0;
+			let objArguments = Module.HEAPU32[pRecord32];
+			let pResult32 = pRecord32 + 1, pErrorMessage32 = pRecord32 + 2, pErrorStack32 = pRecord32 + 3;
 
 			var obj = BINDING.get_js_obj (js_handle);
 			if (!obj)
@@ -379,7 +380,13 @@ var BindingSupportLib = {
 				var args = BINDING.mono_array_to_js_array(objArguments);
 				var jsResult = method.apply(obj, args);
 				var pObj = BINDING.js_to_mono_obj(jsResult);
-				Module.HEAPU32[pResult / 4] = pObj;
+				Module.HEAPU32[pResult32] = pObj;
+				Module.HEAPU32[pErrorMessage32] = 0;
+				Module.HEAPU32[pErrorStack32] = 0;
+			} catch (exc) {
+				Module.HEAPU32[pResult32] = 0;
+				Module.HEAPU32[pErrorMessage32] = BINDING.js_string_to_mono_string_new(exc.message);
+				Module.HEAPU32[pErrorStack32] = BINDING.js_string_to_mono_string_new(exc.stack);
 			} finally {
 				BINDING.mono_wasm_unwind_LMF();
 			}
