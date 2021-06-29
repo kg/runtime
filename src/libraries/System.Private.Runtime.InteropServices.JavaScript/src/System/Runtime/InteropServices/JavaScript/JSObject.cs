@@ -90,7 +90,7 @@ namespace System.Runtime.InteropServices.JavaScript
             // FIXME: Do we actually need to pin these?
             var pinName = GCHandle.Alloc(method, GCHandleType.Normal);
             var pinArgs = GCHandle.Alloc(args, GCHandleType.Normal);
-            var invokeResult = Interop.Runtime.InvokeJSFunction(
+            var invokeResult = (InvokeJSResult)Interop.Runtime.InvokeJSFunction(
                 "BINDING._JSObject_Invoke", 3,
                 typeof(IntPtr).TypeHandle.Value, iHandle,
                 typeof(string).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref method),
@@ -100,7 +100,7 @@ namespace System.Runtime.InteropServices.JavaScript
             pinArgs.Free();
             */
             var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_Invoke", ref iHandle, ref method, ref pRecord);
-            if (invokeResult != 0)
+            if (invokeResult != InvokeJSResult.Success)
                 throw new Exception($"Invoke result was {invokeResult}");
             else if (record.ErrorMessage != null)
                 throw new JSException(record.ErrorMessage, record.ErrorStack);

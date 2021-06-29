@@ -80,7 +80,6 @@ namespace System.Runtime.InteropServices.JavaScript
                 // HACK: This is a value type being passed by-ref into our caller, so we
                 //  don't need to do anything to ensure that it survives until our caller
                 //  returns and the invocation into JS is complete. We can just return its address
-                // Debug.WriteLine($"ref-ing value of type {typeof(T)}");
                 return (IntPtr)Unsafe.AsPointer(ref arg);
             } else {
                 // FIXME: Do we even need to do this? The object reference is on the stack, so it's
