@@ -51,10 +51,20 @@ namespace System.Runtime.InteropServices.JavaScript
             WeakRawObject = new WeakReference<Delegate>(rawDelegate, trackResurrection: false);
         }
 
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        [StructLayout(LayoutKind.Sequential)]
         private struct InvokeRecord {
             public object?[] Arguments;
-            public object? Result;
+            // FIXME: Make this object? and update Invoke
+            public object Result;
+            public string? ErrorMessage;
+            public string? ErrorStack;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct PropertyAccessRecord {
+            // Written by JS for the Get operation, written by C# for Set
+            // FIXME: Make this object? and update the get/set methods
+            public object Value;
             public string? ErrorMessage;
             public string? ErrorStack;
         }
@@ -104,9 +114,6 @@ namespace System.Runtime.InteropServices.JavaScript
                 throw new Exception($"Invoke result was {invokeResult}");
             else if (record.ErrorMessage != null)
                 throw new JSException(record.ErrorMessage, record.ErrorStack);
-            else if (record.Result == null)
-                // FIXME: Our return type should really be object?
-                return "<null>";
             else
                 return record.Result;
         }
@@ -133,12 +140,19 @@ namespace System.Runtime.InteropServices.JavaScript
         ///     valuews.
         ///   </para>
         /// </returns>
-        public object GetObjectProperty(string name)
+        public unsafe object GetObjectProperty(string name)
         {
-            object propertyValue = Interop.Runtime.GetObjectProperty(JSHandle, name, out int exception);
-            if (exception != 0)
-                throw new JSException((string)propertyValue);
-            return propertyValue;
+            var iHandle = (IntPtr)JSHandle;
+            var record = new PropertyAccessRecord {
+            };
+            var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
+            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_GetProperty", ref iHandle, ref name, ref pRecord);
+            if (invokeResult != InvokeJSResult.Success)
+                throw new Exception($"Invoke result was {invokeResult}");
+            else if (record.ErrorMessage != null)
+                throw new JSException(record.ErrorMessage, record.ErrorStack);
+            else
+                return record.Value;
         }
 
         /// <summary>

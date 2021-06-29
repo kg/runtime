@@ -28,6 +28,7 @@ var BindingSupportLib = {
 			module ["mono_intern_string"] = BINDING.mono_intern_string.bind(BINDING);
 			module ["mono_wasm_invoke_js_function_by_qualified_name_impl"] = BINDING._invoke_js_function_by_qualified_name_impl.bind(BINDING);
 			module ["_JSObject_Invoke"] = BINDING._JSObject_Invoke.bind(BINDING);
+			module ["_JSObject_GetProperty"] = BINDING._JSObject_GetProperty.bind(BINDING);
 		},
 
 		bindings_lazy_init: function () {
@@ -363,24 +364,46 @@ var BindingSupportLib = {
 
 		_JSObject_Invoke: function (js_handle, method_name, pRecord) {
 			let pRecord32 = (pRecord / 4) | 0;
-			let objArguments = Module.HEAPU32[pRecord32];
 			let pResult32 = pRecord32 + 1, pErrorMessage32 = pRecord32 + 2, pErrorStack32 = pRecord32 + 3;
-
-			var obj = BINDING.get_js_obj (js_handle);
-			if (!obj)
-				throw new Error(`invalid js object handle ${js_handle}`);
-
-			var method = obj[method_name];
-			if (typeof (method) !== "function")
-				throw new Error(`member ${method_name} of object was not a function`);
 
 			BINDING.mono_wasm_save_LMF();
 			
 			try {
-				var args = BINDING.mono_array_to_js_array(objArguments);
+				var obj = BINDING.get_js_obj (js_handle);
+				if (!obj)
+					throw new Error(`Invalid js object handle ${js_handle}`);
+	
+				var method = obj[method_name];
+				if (typeof (method) !== "function")
+					throw new Error(`Member ${method_name} of object was not a function`);
+
+				var args = BINDING.mono_array_to_js_array(Module.HEAPU32[pRecord32]);
 				var jsResult = method.apply(obj, args);
-				var pObj = BINDING.js_to_mono_obj(jsResult);
-				Module.HEAPU32[pResult32] = pObj;
+				Module.HEAPU32[pResult32] = BINDING.js_to_mono_obj(jsResult);
+				Module.HEAPU32[pErrorMessage32] = 0;
+				Module.HEAPU32[pErrorStack32] = 0;
+			} catch (exc) {
+				Module.HEAPU32[pResult32] = 0;
+				Module.HEAPU32[pErrorMessage32] = BINDING.js_string_to_mono_string_new(exc.message);
+				Module.HEAPU32[pErrorStack32] = BINDING.js_string_to_mono_string_new(exc.stack);
+			} finally {
+				BINDING.mono_wasm_unwind_LMF();
+			}
+		},
+
+		_JSObject_GetProperty: function (js_handle, property_name, pRecord) {
+			let pRecord32 = (pRecord / 4) | 0;
+			let pResult32 = pRecord32, pErrorMessage32 = pRecord32 + 1, pErrorStack32 = pRecord32 + 2;
+
+			BINDING.mono_wasm_save_LMF();
+			
+			try {
+				var obj = BINDING.get_js_obj (js_handle);
+				if (!obj)
+					throw new Error(`Invalid js object handle ${js_handle}`);
+				
+				let value = obj[property_name];
+				Module.HEAPU32[pResult32] = BINDING.js_to_mono_obj(value);
 				Module.HEAPU32[pErrorMessage32] = 0;
 				Module.HEAPU32[pErrorStack32] = 0;
 			} catch (exc) {
