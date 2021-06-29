@@ -81,20 +81,25 @@ namespace System.Runtime.InteropServices.JavaScript
         // FIXME: This should be object?, but if we correct it lots of stuff breaks
         public unsafe object Invoke(string method, params object?[] args)
         {
-            var pinName = GCHandle.Alloc(method, GCHandleType.Normal);
-            var pinArgs = GCHandle.Alloc(args, GCHandleType.Normal);
+            var iHandle = (IntPtr)JSHandle;
             var record = new InvokeRecord {
                 Arguments = args
             };
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
+            /*
+            // FIXME: Do we actually need to pin these?
+            var pinName = GCHandle.Alloc(method, GCHandleType.Normal);
+            var pinArgs = GCHandle.Alloc(args, GCHandleType.Normal);
             var invokeResult = Interop.Runtime.InvokeJSFunction(
                 "BINDING._JSObject_Invoke", 3,
-                typeof(IntPtr).TypeHandle.Value, (IntPtr)JSHandle,
+                typeof(IntPtr).TypeHandle.Value, iHandle,
                 typeof(string).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref method),
                 typeof(IntPtr).TypeHandle.Value, pRecord
             );
             pinName.Free();
             pinArgs.Free();
+            */
+            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_Invoke", ref iHandle, ref method, ref pRecord);
             if (invokeResult != 0)
                 throw new Exception($"Invoke result was {invokeResult}");
             else if (record.ErrorMessage != null)
