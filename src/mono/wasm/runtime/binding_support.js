@@ -29,6 +29,7 @@ var BindingSupportLib = {
 			module ["mono_wasm_invoke_js_function_by_qualified_name_impl"] = BINDING._invoke_js_function_by_qualified_name_impl.bind(BINDING);
 			module ["_JSObject_Invoke"] = BINDING._JSObject_Invoke.bind(BINDING);
 			module ["_JSObject_GetProperty"] = BINDING._JSObject_GetProperty.bind(BINDING);
+			module ["_JSObject_SetProperty"] = BINDING._JSObject_SetProperty.bind(BINDING);
 		},
 
 		bindings_lazy_init: function () {
@@ -415,15 +416,6 @@ var BindingSupportLib = {
 			}
 		},
 
-		/*
-
-            public object? Value;
-            public string? ErrorMessage;
-            public string? ErrorStack;
-            public int CreateIfNotExists;
-            public int HasOwnProperty;		
-		*/
-	
 		_JSObject_SetProperty: function (js_handle, property_name, pRecord) {
 			let pRecord32 = (pRecord / 4) | 0;
 			let pValue32 = pRecord32, pErrorMessage32 = pRecord32 + 1, pErrorStack32 = pRecord32 + 2,
@@ -438,7 +430,7 @@ var BindingSupportLib = {
 				if (!obj)
 					throw new Error(`Invalid js object handle ${js_handle}`);
 
-				let createIfNotExist = !!Module.HEAPU32[pCreate32]
+				let createIfNotExist = !!Module.HEAPU32[pCreate32];
 				if (createIfNotExist || Object.prototype.hasOwnProperty.call(obj, property_name))
 					obj[property_name] = value;
 

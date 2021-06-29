@@ -97,27 +97,13 @@ namespace System.Runtime.InteropServices.JavaScript
         // FIXME: This should be object?, but if we correct it lots of stuff breaks
         public unsafe object Invoke(string method, params object?[] args)
         {
-            var iHandle = (IntPtr)JSHandle;
             var record = new InvokeRecord {
                 Arguments = args
             };
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
-            /*
-            // FIXME: Do we actually need to pin these?
-            var pinName = GCHandle.Alloc(method, GCHandleType.Normal);
-            var pinArgs = GCHandle.Alloc(args, GCHandleType.Normal);
-            var invokeResult = (InvokeJSResult)Interop.Runtime.InvokeJSFunction(
-                "BINDING._JSObject_Invoke", 3,
-                typeof(IntPtr).TypeHandle.Value, iHandle,
-                typeof(string).TypeHandle.Value, *(IntPtr*)Unsafe.AsPointer(ref method),
-                typeof(IntPtr).TypeHandle.Value, pRecord
-            );
-            pinName.Free();
-            pinArgs.Free();
-            */
-            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_Invoke", ref iHandle, ref method, ref pRecord);
+            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_Invoke", (IntPtr)JSHandle, method, pRecord);
             if (invokeResult != InvokeJSResult.Success)
-                throw new Exception($"Invoke result was {invokeResult}");
+                throw new JSException($"Invoke result was {invokeResult}");
             else if (record.ErrorMessage != null)
                 throw new JSException(record.ErrorMessage, record.ErrorStack);
             else
@@ -148,13 +134,12 @@ namespace System.Runtime.InteropServices.JavaScript
         /// </returns>
         public unsafe object GetObjectProperty(string name)
         {
-            var iHandle = (IntPtr)JSHandle;
             var record = new GetPropertyRecord {
             };
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
-            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_GetProperty", ref iHandle, ref name, ref pRecord);
+            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_GetProperty", (IntPtr)JSHandle, name, pRecord);
             if (invokeResult != InvokeJSResult.Success)
-                throw new Exception($"Invoke result was {invokeResult}");
+                throw new JSException($"Invoke result was {invokeResult}");
             else if (record.ErrorMessage != null)
                 throw new JSException(record.ErrorMessage, record.ErrorStack);
             else
@@ -173,15 +158,14 @@ namespace System.Runtime.InteropServices.JavaScript
         /// <param name="createIfNotExists">Defaults to <see langword="true"/> and creates the property on the javascript object if not found, if set to <see langword="false"/> it will not create the property if it does not exist.  If the property exists, the value is updated with the provided value.</param>
         public unsafe void SetObjectProperty(string name, object value, bool createIfNotExists = true)
         {
-            var iHandle = (IntPtr)JSHandle;
             var record = new SetPropertyRecord {
                 Value = value,
                 CreateIfNotExists = createIfNotExists ? 1 : 0
             };
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
-            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_SetProperty", ref iHandle, ref name, ref pRecord);
+            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_SetProperty", (IntPtr)JSHandle, name, pRecord);
             if (invokeResult != InvokeJSResult.Success)
-                throw new Exception($"Invoke result was {invokeResult}");
+                throw new JSException($"Invoke result was {invokeResult}");
             else if (record.ErrorMessage != null)
                 throw new JSException(record.ErrorMessage, record.ErrorStack);
         }
