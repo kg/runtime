@@ -427,7 +427,7 @@ var BindingSupportLib = {
 		_JSObject_SetProperty: function (js_handle, property_name, pRecord) {
 			let pRecord32 = (pRecord / 4) | 0;
 			let pValue32 = pRecord32, pErrorMessage32 = pRecord32 + 1, pErrorStack32 = pRecord32 + 2,
-				pCreate32 = pRecord32 + 3, pHasOwn32 = pRecord32 + 4;
+				pCreate32 = pRecord32 + 3;
 
 			BINDING.mono_wasm_save_LMF();
 			
@@ -438,12 +438,7 @@ var BindingSupportLib = {
 				if (!obj)
 					throw new Error(`Invalid js object handle ${js_handle}`);
 
-
-				let createIfNotExist = !!Module.HEAPU32[pCreate32],
-					hasOwnProperty = !!Module.HEAPU32[pHasOwn32];
-
-				// FIXME: The original hasOwnProperty option was poorly defined and didn't seem to actually
-				//  do anything in practice. Figure out what it was meant to do and if anything relies on it
+				let createIfNotExist = !!Module.HEAPU32[pCreate32]
 				if (createIfNotExist || Object.prototype.hasOwnProperty.call(obj, property_name))
 					obj[property_name] = value;
 

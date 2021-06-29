@@ -73,7 +73,6 @@ namespace System.Runtime.InteropServices.JavaScript
             public string? ErrorMessage;
             public string? ErrorStack;
             public int CreateIfNotExists;
-            public int HasOwnProperty;
         }
 
         /// <summary>
@@ -172,14 +171,12 @@ namespace System.Runtime.InteropServices.JavaScript
         /// array that will be surfaced as a typed ArrayBuffer (byte[], sbyte[], short[], ushort[],
         /// float[], double[]) </param>
         /// <param name="createIfNotExists">Defaults to <see langword="true"/> and creates the property on the javascript object if not found, if set to <see langword="false"/> it will not create the property if it does not exist.  If the property exists, the value is updated with the provided value.</param>
-        /// <param name="hasOwnProperty">Not implemented</param>
-        public unsafe void SetObjectProperty(string name, object value, bool createIfNotExists = true, bool hasOwnProperty = false)
+        public unsafe void SetObjectProperty(string name, object value, bool createIfNotExists = true)
         {
             var iHandle = (IntPtr)JSHandle;
             var record = new SetPropertyRecord {
                 Value = value,
-                CreateIfNotExists = createIfNotExists ? 1 : 0,
-                HasOwnProperty = hasOwnProperty ? 1 : 0
+                CreateIfNotExists = createIfNotExists ? 1 : 0
             };
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
             var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_SetProperty", ref iHandle, ref name, ref pRecord);
