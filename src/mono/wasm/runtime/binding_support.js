@@ -414,7 +414,49 @@ var BindingSupportLib = {
 				BINDING.mono_wasm_unwind_LMF();
 			}
 		},
+
+		/*
+
+            public object? Value;
+            public string? ErrorMessage;
+            public string? ErrorStack;
+            public int CreateIfNotExists;
+            public int HasOwnProperty;		
+		*/
 	
+		_JSObject_SetProperty: function (js_handle, property_name, pRecord) {
+			let pRecord32 = (pRecord / 4) | 0;
+			let pValue32 = pRecord32, pErrorMessage32 = pRecord32 + 1, pErrorStack32 = pRecord32 + 2,
+				pCreate32 = pRecord32 + 3, pHasOwn32 = pRecord32 + 4;
+
+			BINDING.mono_wasm_save_LMF();
+			
+			try {
+				let value = BINDING.unbox_mono_obj (Module.HEAPU32[pValue32]);
+
+				var obj = BINDING.get_js_obj (js_handle);
+				if (!obj)
+					throw new Error(`Invalid js object handle ${js_handle}`);
+
+
+				let createIfNotExist = !!Module.HEAPU32[pCreate32],
+					hasOwnProperty = !!Module.HEAPU32[pHasOwn32];
+
+				// FIXME: The original hasOwnProperty option was poorly defined and didn't seem to actually
+				//  do anything in practice. Figure out what it was meant to do and if anything relies on it
+				if (createIfNotExist || Object.prototype.hasOwnProperty.call(obj, property_name))
+					obj[property_name] = value;
+
+				Module.HEAPU32[pErrorMessage32] = 0;
+				Module.HEAPU32[pErrorStack32] = 0;
+			} catch (exc) {
+				Module.HEAPU32[pErrorMessage32] = BINDING.js_string_to_mono_string_new(exc.message);
+				Module.HEAPU32[pErrorStack32] = BINDING.js_string_to_mono_string_new(exc.stack);
+			} finally {
+				BINDING.mono_wasm_unwind_LMF();
+			}
+		},
+
 		_invoke_js_function_by_qualified_name_impl: function (
 			pInternedFunctionName, argumentCount,
 			pMarshalTypes, pTypeHandles, pArguments

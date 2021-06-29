@@ -61,12 +61,19 @@ namespace System.Runtime.InteropServices.JavaScript
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct PropertyAccessRecord {
-            // Written by JS for the Get operation, written by C# for Set
-            // FIXME: Make this object? and update the get/set methods
+        private struct GetPropertyRecord {
             public object Value;
             public string? ErrorMessage;
             public string? ErrorStack;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct SetPropertyRecord {
+            public object? Value;
+            public string? ErrorMessage;
+            public string? ErrorStack;
+            public int CreateIfNotExists;
+            public int HasOwnProperty;
         }
 
         /// <summary>
@@ -143,7 +150,7 @@ namespace System.Runtime.InteropServices.JavaScript
         public unsafe object GetObjectProperty(string name)
         {
             var iHandle = (IntPtr)JSHandle;
-            var record = new PropertyAccessRecord {
+            var record = new GetPropertyRecord {
             };
             var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
             var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_GetProperty", ref iHandle, ref name, ref pRecord);
@@ -165,12 +172,21 @@ namespace System.Runtime.InteropServices.JavaScript
         /// array that will be surfaced as a typed ArrayBuffer (byte[], sbyte[], short[], ushort[],
         /// float[], double[]) </param>
         /// <param name="createIfNotExists">Defaults to <see langword="true"/> and creates the property on the javascript object if not found, if set to <see langword="false"/> it will not create the property if it does not exist.  If the property exists, the value is updated with the provided value.</param>
-        /// <param name="hasOwnProperty"></param>
-        public void SetObjectProperty(string name, object value, bool createIfNotExists = true, bool hasOwnProperty = false)
+        /// <param name="hasOwnProperty">Not implemented</param>
+        public unsafe void SetObjectProperty(string name, object value, bool createIfNotExists = true, bool hasOwnProperty = false)
         {
-            object setPropResult = Interop.Runtime.SetObjectProperty(JSHandle, name, value, createIfNotExists, hasOwnProperty, out int exception);
-            if (exception != 0)
-                throw new JSException($"Error setting {name} on (js-obj js '{JSHandle}' .NET '{Int32Handle} raw '{RawObject != null})");
+            var iHandle = (IntPtr)JSHandle;
+            var record = new SetPropertyRecord {
+                Value = value,
+                CreateIfNotExists = createIfNotExists ? 1 : 0,
+                HasOwnProperty = hasOwnProperty ? 1 : 0
+            };
+            var pRecord = (IntPtr)Unsafe.AsPointer(ref record);
+            var invokeResult = Runtime.InvokeJSFunctionByName("BINDING._JSObject_SetProperty", ref iHandle, ref name, ref pRecord);
+            if (invokeResult != InvokeJSResult.Success)
+                throw new Exception($"Invoke result was {invokeResult}");
+            else if (record.ErrorMessage != null)
+                throw new JSException(record.ErrorMessage, record.ErrorStack);
         }
 
         /// <summary>
