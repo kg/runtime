@@ -497,6 +497,7 @@ namespace System.Linq
         /// <exception cref="System.OperationCanceledException">
         /// The query was canceled.
         /// </exception>
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static void ForAll<TSource>(this ParallelQuery<TSource> source, Action<TSource> action)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
@@ -534,7 +535,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return new WhereQueryOperator<TSource>(source, predicate);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Where(predicate);
+            else
+                return new WhereQueryOperator<TSource>(source, predicate);
         }
 
         /// <summary>
@@ -552,9 +556,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            throw new Exception("Where should fail");
-
-            // return new IndexedWhereQueryOperator<TSource>(source, predicate);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Where(predicate);
+            else
+                return new IndexedWhereQueryOperator<TSource>(source, predicate);
         }
 
         //-----------------------------------------------------------------------------------
@@ -580,9 +585,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
-            throw new Exception("Select should fail");
-
-            // return new SelectQueryOperator<TSource, TResult>(source, selector);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Select(selector);
+            else
+                return new SelectQueryOperator<TSource, TResult>(source, selector);
         }
 
         /// <summary>
@@ -603,7 +609,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
-            return new IndexedSelectQueryOperator<TSource, TResult>(source, selector);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Select(selector);
+            else
+                return new IndexedSelectQueryOperator<TSource, TResult>(source, selector);
         }
 
         //-----------------------------------------------------------------------------------
@@ -634,7 +643,10 @@ namespace System.Linq
             if (second == null) throw new ArgumentNullException(nameof(second));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return new ZipQueryOperator<TFirst, TSecond, TResult>(first, second, resultSelector);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TFirst>)source).Zip(((IEnumerable<TSecond>)second), selector);
+            else
+                return new ZipQueryOperator<TFirst, TSecond, TResult>(first, second, resultSelector);
         }
 
         /// <summary>
@@ -759,8 +771,11 @@ namespace System.Linq
             if (innerKeySelector == null) throw new ArgumentNullException(nameof(innerKeySelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return new JoinQueryOperator<TOuter, TInner, TKey, TResult>(
-                outer, inner, outerKeySelector, innerKeySelector, resultSelector, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TOuter>)outer).Join(inner, outerKeySelector, innerKeySelector, resultSelector, comparer);
+            else
+                return new JoinQueryOperator<TOuter, TInner, TKey, TResult>(
+                    outer, inner, outerKeySelector, innerKeySelector, resultSelector, comparer);
         }
 
         /// <summary>
@@ -893,8 +908,11 @@ namespace System.Linq
             if (innerKeySelector == null) throw new ArgumentNullException(nameof(innerKeySelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return new GroupJoinQueryOperator<TOuter, TInner, TKey, TResult>(outer, inner,
-                outerKeySelector, innerKeySelector, resultSelector, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TOuter>)outer).GroupJoin(inner, outerKeySelector, innerKeySelector, resultSelector, comparer);
+            else
+                return new GroupJoinQueryOperator<TOuter, TInner, TKey, TResult>(outer, inner,
+                    outerKeySelector, innerKeySelector, resultSelector, comparer);
         }
 
         /// <summary>
@@ -953,7 +971,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
-            return new SelectManyQueryOperator<TSource, TResult, TResult>(source, selector, null, null);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SelectMany(selector);
+            else
+                return new SelectManyQueryOperator<TSource, TResult, TResult>(source, selector, null, null);
         }
 
         /// <summary>
@@ -976,7 +997,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
-            return new SelectManyQueryOperator<TSource, TResult, TResult>(source, null, selector, null);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SelectMany(selector);
+            else
+                return new SelectManyQueryOperator<TSource, TResult, TResult>(source, null, selector, null);
         }
 
         /// <summary>
@@ -1007,7 +1031,10 @@ namespace System.Linq
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return new SelectManyQueryOperator<TSource, TCollection, TResult>(source, collectionSelector, null, resultSelector);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SelectMany(collectionSelector, resultSelector);
+            else
+                return new SelectManyQueryOperator<TSource, TCollection, TResult>(source, collectionSelector, null, resultSelector);
         }
 
         /// <summary>
@@ -1043,7 +1070,10 @@ namespace System.Linq
             if (collectionSelector == null) throw new ArgumentNullException(nameof(collectionSelector));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return new SelectManyQueryOperator<TSource, TCollection, TResult>(source, null, collectionSelector, resultSelector);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SelectMany(collectionSelector, resultSelector);
+            else
+                return new SelectManyQueryOperator<TSource, TCollection, TResult>(source, null, collectionSelector, resultSelector);
         }
 
         //-----------------------------------------------------------------------------------
@@ -1076,8 +1106,11 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new OrderedParallelQuery<TSource>(
-                new SortQueryOperator<TSource, TKey>(source, keySelector, null, false));
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).OrderBy(keySelector);
+            else
+                return new OrderedParallelQuery<TSource>(
+                    new SortQueryOperator<TSource, TKey>(source, keySelector, null, false));
         }
 
         /// <summary>
@@ -1104,8 +1137,11 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new OrderedParallelQuery<TSource>(
-                new SortQueryOperator<TSource, TKey>(source, keySelector, comparer, false));
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).OrderBy(keySelector, comparer);
+            else
+                return new OrderedParallelQuery<TSource>(
+                    new SortQueryOperator<TSource, TKey>(source, keySelector, comparer, false));
         }
 
         /// <summary>
@@ -1131,7 +1167,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new OrderedParallelQuery<TSource>(new SortQueryOperator<TSource, TKey>(source, keySelector, null, true));
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).OrderByDescending(keySelector);
+            else
+                return new OrderedParallelQuery<TSource>(new SortQueryOperator<TSource, TKey>(source, keySelector, null, true));
         }
 
         /// <summary>
@@ -1158,8 +1197,11 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new OrderedParallelQuery<TSource>(
-                new SortQueryOperator<TSource, TKey>(source, keySelector, comparer, true));
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).OrderByDescending(keySelector, comparer);
+            else
+                return new OrderedParallelQuery<TSource>(
+                    new SortQueryOperator<TSource, TKey>(source, keySelector, comparer, true));
         }
 
         /// <summary>
