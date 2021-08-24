@@ -22,6 +22,7 @@ namespace System.Linq.Parallel
     ///     Min({ 5.0, NaN }) == 5.0!  We impose a total ordering so that NaN is smaller than
     ///     everything, including -infinity, which is consistent with Comparer_T.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class NullableFloatMinMaxAggregationOperator : InlinedAggregationOperator<float?, float?, float?>
     {
         private readonly int _sign; // The sign (-1 for min, 1 for max).

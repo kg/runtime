@@ -16,6 +16,7 @@ namespace System.Linq.Parallel
     /// <summary>
     /// An inlined sum aggregation and its enumerator, for doubles.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class DoubleSumAggregationOperator : InlinedAggregationOperator<double, double, double>
     {
         //---------------------------------------------------------------------------------------

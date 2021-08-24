@@ -1919,9 +1919,13 @@ namespace System.Linq
             if (combineAccumulatorsFunc == null) throw new ArgumentNullException(nameof(combineAccumulatorsFunc));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return new AssociativeAggregationOperator<TSource, TAccumulate, TResult>(
-                source, default!, seedFactory, true, updateAccumulatorFunc, combineAccumulatorsFunc, resultSelector,
-                false, QueryAggregationOptions.AssociativeCommutative).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                // FIXME: What do we do with combineAccumulatorsFunc?
+                return ((IEnumerable<TSource>)source).Aggregate(seedFactory(), updateAccumulatorFunc, resultSelector);
+            else
+                return new AssociativeAggregationOperator<TSource, TAccumulate, TResult>(
+                    source, default!, seedFactory, true, updateAccumulatorFunc, combineAccumulatorsFunc, resultSelector,
+                    false, QueryAggregationOptions.AssociativeCommutative).Aggregate();
         }
 
 
@@ -1959,6 +1963,9 @@ namespace System.Linq
                 }
             }
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Count();
+
             // Otherwise, enumerate the whole thing and aggregate a count.
             checked
             {
@@ -1992,6 +1999,9 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Count(predicate);
 
             // Construct a where operator to filter out non-matching elements, and then aggregate.
             checked

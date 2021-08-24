@@ -18,6 +18,7 @@ namespace System.Linq.Parallel
     /// An inlined count aggregation and its enumerator.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class CountAggregationOperator<TSource> : InlinedAggregationOperator<TSource, int, int>
     {
         //---------------------------------------------------------------------------------------

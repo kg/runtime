@@ -16,6 +16,7 @@ namespace System.Linq.Parallel
     /// <summary>
     /// An inlined average aggregation operator and its enumerator, for Nullable longs.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class NullableLongAverageAggregationOperator : InlinedAggregationOperator<long?, Pair<long, long>, double?>
     {
         //---------------------------------------------------------------------------------------

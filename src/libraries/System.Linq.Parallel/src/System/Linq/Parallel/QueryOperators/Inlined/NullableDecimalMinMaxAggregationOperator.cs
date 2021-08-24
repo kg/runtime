@@ -16,6 +16,7 @@ namespace System.Linq.Parallel
     /// <summary>
     /// An inlined min/max aggregation and its enumerator, for Nullable decimals.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class NullableDecimalMinMaxAggregationOperator : InlinedAggregationOperator<decimal?, decimal?, decimal?>
     {
         private readonly int _sign; // The sign (-1 for min, 1 for max).

@@ -17,6 +17,7 @@ namespace System.Linq.Parallel
     /// Inlined aggregations for summing up primitives (int, long, float, double, decimal), as
     /// well as the nullable versions of each (int?, long?, float?, double?, decimal?).
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class IntSumAggregationOperator : InlinedAggregationOperator<int, int, int>
     {
         //---------------------------------------------------------------------------------------

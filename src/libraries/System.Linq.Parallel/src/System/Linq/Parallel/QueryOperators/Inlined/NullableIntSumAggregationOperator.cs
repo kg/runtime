@@ -16,6 +16,7 @@ namespace System.Linq.Parallel
     /// <summary>
     /// An inlined sum aggregation and its enumerator, for Nullable ints.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class NullableIntSumAggregationOperator : InlinedAggregationOperator<int?, int?, int?>
     {
         //---------------------------------------------------------------------------------------

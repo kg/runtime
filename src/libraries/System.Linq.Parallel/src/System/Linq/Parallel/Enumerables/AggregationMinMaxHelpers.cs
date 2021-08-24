@@ -14,6 +14,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace System.Linq
 {
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal static class AggregationMinMaxHelpers<T>
     {
         //-----------------------------------------------------------------------------------
