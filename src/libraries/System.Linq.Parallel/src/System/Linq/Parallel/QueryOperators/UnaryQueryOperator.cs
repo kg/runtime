@@ -89,8 +89,7 @@ namespace System.Linq.Parallel
         // Implementation of QueryResults for an unary operator. The results will not be indexable
         // unless a derived class provides that functionality.
         //
-
-        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
+        
         internal class UnaryQueryOperatorResults : QueryResults<TOutput>
         {
             protected QueryResults<TInput> _childQueryResults; // Results of the child query
@@ -106,6 +105,7 @@ namespace System.Linq.Parallel
                 _preferStriping = preferStriping;
             }
 
+            [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
             internal override void GivePartitionedStream(IPartitionedStreamRecipient<TOutput> recipient)
             {
                 Debug.Assert(IsIndexible == (_op.OrdinalIndexState == OrdinalIndexState.Indexable));

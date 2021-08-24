@@ -28,6 +28,7 @@ namespace System.Linq.Parallel
             _useStriping = useStriping;
         }
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal override void GivePartitionedStream(IPartitionedStreamRecipient<T> recipient)
         {
             PartitionedStream<T, int> partitionedStream = GetPartitionedStream();
@@ -49,6 +50,7 @@ namespace System.Linq.Parallel
             return _source[index];
         }
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal PartitionedStream<T, int> GetPartitionedStream()
         {
             return ExchangeUtilities.PartitionDataSource(_source, _partitionCount, _useStriping);

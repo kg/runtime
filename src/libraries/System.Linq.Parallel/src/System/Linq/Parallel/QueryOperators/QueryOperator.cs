@@ -311,7 +311,7 @@ namespace System.Linq.Parallel
         // Return Value:
         //    A query operator.
         //
-
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal static QueryOperator<TOutput> AsQueryOperator(IEnumerable<TOutput> source)
         {
             Debug.Assert(source != null);

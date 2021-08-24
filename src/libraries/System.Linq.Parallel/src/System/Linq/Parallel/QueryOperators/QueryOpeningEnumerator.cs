@@ -20,6 +20,7 @@ namespace System.Linq.Parallel
     /// lazily because once GetOpenedEnumerator() is called, PLINQ starts precomputing the
     /// results of the query.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class QueryOpeningEnumerator<TOutput> : IEnumerator<TOutput>
     {
         private readonly QueryOperator<TOutput> _queryOperator;
