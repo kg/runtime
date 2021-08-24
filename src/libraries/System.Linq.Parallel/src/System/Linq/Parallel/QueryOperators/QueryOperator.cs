@@ -312,9 +312,9 @@ namespace System.Linq.Parallel
         // Return Value:
         //    A query operator.
         //
-        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal static QueryOperator<TOutput> AsQueryOperator(IEnumerable<TOutput> source)
         {
+            Debug.Assert(!OperatingSystem.IsBrowser());
             Debug.Assert(source != null);
 
             // Just try casting the data source to a query operator, in the case that

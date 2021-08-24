@@ -113,7 +113,6 @@ namespace System.Linq
         /// <exception cref="System.ArgumentNullException">
         /// <paramref name="source"/> is a null reference (Nothing in Visual Basic).
         /// </exception>
-        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static ParallelQuery<TSource> AsParallel<TSource>(this Partitioner<TSource> source)
         {
             if (source == null)
@@ -121,6 +120,7 @@ namespace System.Linq
                 throw new ArgumentNullException(nameof(source));
             }
 
+            Debug.Assert(!OperatingSystem.IsBrowser());
             return new PartitionerQueryOperator<TSource>(source);
         }
 
@@ -519,12 +519,12 @@ namespace System.Linq
         /// <exception cref="System.OperationCanceledException">
         /// The query was canceled.
         /// </exception>
-        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static void ForAll<TSource>(this ParallelQuery<TSource> source, Action<TSource> action)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (action == null) throw new ArgumentNullException(nameof(action));
 
+            Debug.Assert(!OperatingSystem.IsBrowser());
             // We just instantiate the forall operator and invoke it synchronously on this thread.
             // By the time it returns, the entire query has been executed and the actions run..
             new ForAllOperator<TSource>(source, action).RunSynchronously();
