@@ -30,6 +30,7 @@ namespace System.Linq.Parallel
     /// Yield phase simply consists of yielding these elements as output.
     /// </summary>
     /// <typeparam name="TResult"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class TakeOrSkipQueryOperator<TResult> : UnaryQueryOperator<TResult, TResult>
     {
         private readonly int _count; // The number of elements to take or skip.

@@ -21,6 +21,7 @@ namespace System.Linq.Parallel
     /// i.e. who found the candidate with the smallest index, will yield an element.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class FirstQueryOperator<TSource> : UnaryQueryOperator<TSource, TSource>
     {
         private readonly Func<TSource, bool>? _predicate; // The optional predicate used during the search.

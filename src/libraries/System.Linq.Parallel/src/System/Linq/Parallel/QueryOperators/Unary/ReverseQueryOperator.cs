@@ -26,6 +26,7 @@ namespace System.Linq.Parallel
     /// between the steps.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ReverseQueryOperator<TSource> : UnaryQueryOperator<TSource, TSource>
     {
         //---------------------------------------------------------------------------------------

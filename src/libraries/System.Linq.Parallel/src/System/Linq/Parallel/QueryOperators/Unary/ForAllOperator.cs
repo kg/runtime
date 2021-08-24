@@ -20,6 +20,7 @@ namespace System.Linq.Parallel
     /// query for effect instead of yielding a data result.
     /// </summary>
     /// <typeparam name="TInput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ForAllOperator<TInput> : UnaryQueryOperator<TInput, TInput>
     {
         // The per-element action to be invoked.

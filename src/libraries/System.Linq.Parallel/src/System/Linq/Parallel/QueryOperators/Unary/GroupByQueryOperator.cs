@@ -26,6 +26,7 @@ namespace System.Linq.Parallel
     /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TGroupKey"></typeparam>
     /// <typeparam name="TElement"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class GroupByQueryOperator<TSource, TGroupKey, TElement> :
         UnaryQueryOperator<TSource, IGrouping<TGroupKey, TElement>>
     {

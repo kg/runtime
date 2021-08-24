@@ -20,6 +20,7 @@ namespace System.Linq.Parallel
     /// sought-after element.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ElementAtQueryOperator<TSource> : UnaryQueryOperator<TSource, TSource>
     {
         private readonly int _index; // The index that we're looking for.

@@ -34,6 +34,7 @@ namespace System.Linq.Parallel
     /// other workers notice it and quit as quickly as possible.
     /// </summary>
     /// <typeparam name="TInput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class AnyAllSearchOperator<TInput> : UnaryQueryOperator<TInput, bool>
     {
         private readonly Func<TInput, bool> _predicate; // The predicate used to test membership.

@@ -38,6 +38,7 @@ namespace System.Linq.Parallel
     /// its data source (since it may have stopped prematurely due to (3) above).
     /// </summary>
     /// <typeparam name="TResult"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class TakeOrSkipWhileQueryOperator<TResult> : UnaryQueryOperator<TResult, TResult>
     {
         // Predicate function used to decide when to stop yielding elements. One pair is used for
@@ -200,6 +201,7 @@ namespace System.Linq.Parallel
         // The enumerator type responsible for executing the take- or skip-while.
         //
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         private sealed class TakeOrSkipWhileQueryOperatorEnumerator<TKey> : QueryOperatorEnumerator<TResult, TKey>
         {
             private readonly QueryOperatorEnumerator<TResult, TKey> _source; // The data source to enumerate.

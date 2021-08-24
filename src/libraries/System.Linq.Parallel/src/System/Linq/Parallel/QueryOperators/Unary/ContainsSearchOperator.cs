@@ -20,6 +20,7 @@ namespace System.Linq.Parallel
     /// of the partitions to stop searching.
     /// </summary>
     /// <typeparam name="TInput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ContainsSearchOperator<TInput> : UnaryQueryOperator<TInput, bool>
     {
         private readonly TInput _searchValue; // The value for which we are searching.

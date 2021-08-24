@@ -23,6 +23,7 @@ namespace System.Linq.Parallel
     /// the 0th partition which yields the default value.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class DefaultIfEmptyQueryOperator<TSource> : UnaryQueryOperator<TSource, TSource>
     {
         private readonly TSource _defaultValue; // The default value to use (if empty).
