@@ -3501,7 +3501,11 @@ namespace System.Linq
         public static double Average(this ParallelQuery<int> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new IntAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<int>)source).Average();
+            else
+                return new IntAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3523,7 +3527,11 @@ namespace System.Linq
         public static double? Average(this ParallelQuery<int?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableIntAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<int?>)source).Average();
+            else
+                return new NullableIntAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3548,7 +3556,11 @@ namespace System.Linq
         public static double Average(this ParallelQuery<long> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new LongAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<long>)source).Average();
+            else
+                return new LongAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3570,7 +3582,11 @@ namespace System.Linq
         public static double? Average(this ParallelQuery<long?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableLongAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<long?>)source).Average();
+            else
+                return new NullableLongAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3593,7 +3609,11 @@ namespace System.Linq
         public static float Average(this ParallelQuery<float> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new FloatAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<float>)source).Average();
+            else
+                return new FloatAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3613,7 +3633,11 @@ namespace System.Linq
         public static float? Average(this ParallelQuery<float?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableFloatAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<float?>)source).Average();
+            else
+                return new NullableFloatAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3636,7 +3660,11 @@ namespace System.Linq
         public static double Average(this ParallelQuery<double> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DoubleAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<double>)source).Average();
+            else
+                return new DoubleAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3656,7 +3684,11 @@ namespace System.Linq
         public static double? Average(this ParallelQuery<double?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableDoubleAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<double?>)source).Average();
+            else
+                return new NullableDoubleAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3679,7 +3711,11 @@ namespace System.Linq
         public static decimal Average(this ParallelQuery<decimal> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DecimalAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<decimal>)source).Average();
+            else
+                return new DecimalAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3699,7 +3735,11 @@ namespace System.Linq
         public static decimal? Average(this ParallelQuery<decimal?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableDecimalAverageAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<decimal?>)source).Average();
+            else
+                return new NullableDecimalAverageAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -3972,7 +4012,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return new AnyAllSearchOperator<TSource>(source, true, predicate).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Any(predicate);
+            else
+                return new AnyAllSearchOperator<TSource>(source, true, predicate).Aggregate();
         }
 
         /// <summary>
@@ -4024,7 +4067,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return new AnyAllSearchOperator<TSource>(source, false, predicate).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).All(predicate);
+            else
+                return new AnyAllSearchOperator<TSource>(source, false, predicate).Aggregate();
         }
 
         //-----------------------------------------------------------------------------------
@@ -4081,7 +4127,10 @@ namespace System.Linq
 
             // @PERF: there are many simple optimizations we can make for collection types with known sizes.
 
-            return new ContainsSearchOperator<TSource>(source, value, comparer).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Contains(value, comparer);
+            else
+                return new ContainsSearchOperator<TSource>(source, value, comparer).Aggregate();
         }
 
         /*===================================================================================
@@ -4110,7 +4159,10 @@ namespace System.Linq
 
             if (count > 0)
             {
-                return new TakeOrSkipQueryOperator<TSource>(source, count, true);
+                if (OperatingSystem.IsBrowser())
+                    return ((IEnumerable<TSource>)source).Take(count);
+                else
+                    return new TakeOrSkipQueryOperator<TSource>(source, count, true);
             }
             else
             {
@@ -4141,6 +4193,9 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).TakeWhile(predicate);
+
             return new TakeOrSkipWhileQueryOperator<TSource>(source, predicate, null, true);
         }
 
@@ -4166,6 +4221,9 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).TakeWhile(predicate);
+
             return new TakeOrSkipWhileQueryOperator<TSource>(source, null, predicate, true);
         }
 
@@ -4189,6 +4247,9 @@ namespace System.Linq
         public static ParallelQuery<TSource> Skip<TSource>(this ParallelQuery<TSource> source, int count)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Skip(count);
 
             // If the count is 0 (or less) we just return the whole stream.
             if (count <= 0)
@@ -4223,7 +4284,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return new TakeOrSkipWhileQueryOperator<TSource>(source, predicate, null, false);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SkipWhile(predicate);
+            else
+                return new TakeOrSkipWhileQueryOperator<TSource>(source, predicate, null, false);
         }
 
         /// <summary>
@@ -4250,7 +4314,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return new TakeOrSkipWhileQueryOperator<TSource>(source, null, predicate, false);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SkipWhile(predicate);
+            else
+                return new TakeOrSkipWhileQueryOperator<TSource>(source, null, predicate, false);
         }
 
         /*===================================================================================
@@ -4275,7 +4342,11 @@ namespace System.Linq
         {
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
-            return new ConcatQueryOperator<TSource>(first, second);
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)first).Concat(second);
+            else
+                return new ConcatQueryOperator<TSource>(first, second);
         }
 
         /// <summary>
@@ -4379,6 +4450,9 @@ namespace System.Linq
 
             // If comparer is null, use the default one
             comparer = comparer ?? EqualityComparer<TSource>.Default;
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)first).SequenceEqual(second, comparer);
 
             QueryOperator<TSource> leftOp = QueryOperator<TSource>.AsQueryOperator(first);
             QueryOperator<TSource> rightOp = QueryOperator<TSource>.AsQueryOperator(second);
@@ -4556,7 +4630,10 @@ namespace System.Linq
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
 
-            return new UnionQueryOperator<TSource>(first, second, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)first).Union(second, comparer);
+            else
+                return new UnionQueryOperator<TSource>(first, second, comparer);
         }
 
         /// <summary>
@@ -4651,7 +4728,10 @@ namespace System.Linq
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
 
-            return new IntersectQueryOperator<TSource>(first, second, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)first).Intersect(second, comparer);
+            else
+                return new IntersectQueryOperator<TSource>(first, second, comparer);
         }
 
         /// <summary>
@@ -4747,7 +4827,10 @@ namespace System.Linq
             if (first == null) throw new ArgumentNullException(nameof(first));
             if (second == null) throw new ArgumentNullException(nameof(second));
 
-            return new ExceptQueryOperator<TSource>(first, second, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)first).Except(second, comparer);
+            else
+                return new ExceptQueryOperator<TSource>(first, second, comparer);
         }
 
         /// <summary>
@@ -4821,6 +4904,9 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ToArray();
+
             if (source is QueryOperator<TSource> asOperator)
             {
                 return asOperator.ExecuteAndGetResultsAsArray();
@@ -4852,6 +4938,9 @@ namespace System.Linq
         public static List<TSource> ToList<TSource>(this ParallelQuery<TSource> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ToList();
 
             // Allocate a growable list (optionally passing the length as the initial size).
             List<TSource> list = new List<TSource>();
@@ -4965,6 +5054,9 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ToDictionary(keySelector, comparer);
+
             // comparer may be null. In that case, the Dictionary constructor will use the default comparer.
             Dictionary<TKey, TSource> result = new Dictionary<TKey, TSource>(comparer);
 
@@ -5063,6 +5155,9 @@ namespace System.Linq
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (elementSelector == null) throw new ArgumentNullException(nameof(elementSelector));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ToDictionary(keySelector, elementSelector, comparer);
+
             // comparer may be null. In that case, the Dictionary constructor will use the default comparer.
             Dictionary<TKey, TElement> result = new Dictionary<TKey, TElement>(comparer);
 
@@ -5146,6 +5241,9 @@ namespace System.Linq
 
             // comparer may be null, in which case we use the default comparer.
             comparer = comparer ?? EqualityComparer<TKey>.Default;
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ToLookup(keySelector, comparer);
 
             ParallelQuery<IGrouping<TKey, TSource>> groupings = source.GroupBy(keySelector, comparer);
 
@@ -5234,6 +5332,9 @@ namespace System.Linq
             // comparer may be null, in which case we use the default comparer.
             comparer = comparer ?? EqualityComparer<TKey>.Default;
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ToLookup(keySelector, elementSelector, comparer);
+
             ParallelQuery<IGrouping<TKey, TElement>> groupings = source.GroupBy(keySelector, elementSelector, comparer);
 
             Parallel.Lookup<TKey, TElement> lookup = new Parallel.Lookup<TKey, TElement>(comparer);
@@ -5274,7 +5375,11 @@ namespace System.Linq
         public static ParallelQuery<TSource> Reverse<TSource>(this ParallelQuery<TSource> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new ReverseQueryOperator<TSource>(source);
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Reverse();
+            else
+                return new ReverseQueryOperator<TSource>(source);
         }
 
         //-----------------------------------------------------------------------------------
@@ -5401,6 +5506,9 @@ namespace System.Linq
             //     seek directly to the 0th element.
             if (source == null) throw new ArgumentNullException(nameof(source));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).First();
+
             FirstQueryOperator<TSource> queryOp = new FirstQueryOperator<TSource>(source, null);
 
             // If in conservative mode and a premature merge would be inserted by the First operator,
@@ -5443,6 +5551,9 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).First(predicate);
+
             FirstQueryOperator<TSource> queryOp = new FirstQueryOperator<TSource>(source, predicate);
 
             // If in conservative mode and a premature merge would be inserted by the First operator,
@@ -5480,6 +5591,9 @@ namespace System.Linq
         public static TSource? FirstOrDefault<TSource>(this ParallelQuery<TSource> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).FirstOrDefault(predicate);
 
             // @PERF: optimize for seekable data sources.  E.g. if an array, we can
             //     seek directly to the 0th element.
@@ -5527,6 +5641,9 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).FirstOrDefault(predicate);
 
             FirstQueryOperator<TSource> queryOp = new FirstQueryOperator<TSource>(source, predicate);
 
@@ -5577,6 +5694,9 @@ namespace System.Linq
             //     seek directly to the last element.
             if (source == null) throw new ArgumentNullException(nameof(source));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Last();
+
             LastQueryOperator<TSource> queryOp = new LastQueryOperator<TSource>(source, null);
 
             // If in conservative mode and a premature merge would be inserted by the First operator,
@@ -5619,6 +5739,9 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Last(predicate);
+
             LastQueryOperator<TSource> queryOp = new LastQueryOperator<TSource>(source, predicate);
 
             // If in conservative mode and a premature merge would be inserted by the First operator,
@@ -5660,6 +5783,9 @@ namespace System.Linq
             // @PERF: optimize for seekable data sources.  E.g. if an array, we can
             //     seek directly to the last element.
             if (source == null) throw new ArgumentNullException(nameof(source));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).LastOrDefault();
 
             LastQueryOperator<TSource> queryOp = new LastQueryOperator<TSource>(source, null);
 
