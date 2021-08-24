@@ -20,8 +20,8 @@ namespace System.Linq
     /// </summary>
     public class OrderedParallelQuery<TSource> : ParallelQuery<TSource>
     {
-        private readonly QueryOperator<TSource> _sortOp;
-        private readonly IOrderedEnumerable<TSource> _browser;
+        private readonly QueryOperator<TSource>? _sortOp;
+        private readonly IOrderedEnumerable<TSource>? _browser;
 
         [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal OrderedParallelQuery(QueryOperator<TSource> sortOp)
@@ -44,12 +44,24 @@ namespace System.Linq
         [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal QueryOperator<TSource> SortOperator
         {
-            get { return _sortOp; }
+            get {
+                if (_sortOp == null)
+                    throw new NullReferenceException("_sortOp");
+                else
+                    return _sortOp;
+            }
         }
 
         internal IOrderedEnumerable<TSource> OrderedEnumerable
         {
-            get { return _browser ?? (IOrderedEnumerable<TSource>)_sortOp; }
+            get {
+                if (_sortOp != null)
+                    return _sortOp;
+                else if (_browser != null)
+                    return _browser;
+                else
+                    throw new NullReferenceException("_browser and _sortOp");
+            }
         }
 
         /// <summary>
@@ -58,7 +70,12 @@ namespace System.Linq
         /// <returns>An enumerator that iterates through the sequence.</returns>
         public override IEnumerator<TSource> GetEnumerator()
         {
-            return (_browser ?? _sortOp).GetEnumerator();
+            if (_sortOp != null)
+                return _sortOp.GetEnumerator();
+            else if (_browser != null)
+                return _browser.GetEnumerator();
+            else
+                throw new NullReferenceException("_browser and _sortOp");
         }
     }
 }

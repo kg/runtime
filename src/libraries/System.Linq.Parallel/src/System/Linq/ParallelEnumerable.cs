@@ -536,7 +536,7 @@ namespace System.Linq
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).Where(predicate);
+                return ((IEnumerable<TSource>)source).Where(predicate).AsParallel();
             else
                 return new WhereQueryOperator<TSource>(source, predicate);
         }
@@ -557,7 +557,7 @@ namespace System.Linq
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).Where(predicate);
+                return ((IEnumerable<TSource>)source).Where(predicate).AsParallel();
             else
                 return new IndexedWhereQueryOperator<TSource>(source, predicate);
         }
@@ -586,7 +586,7 @@ namespace System.Linq
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).Select(selector);
+                return ((IEnumerable<TSource>)source).Select(selector).AsParallel();
             else
                 return new SelectQueryOperator<TSource, TResult>(source, selector);
         }
@@ -610,7 +610,7 @@ namespace System.Linq
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).Select(selector);
+                return ((IEnumerable<TSource>)source).Select(selector).AsParallel();
             else
                 return new IndexedSelectQueryOperator<TSource, TResult>(source, selector);
         }
@@ -644,7 +644,7 @@ namespace System.Linq
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TFirst>)source).Zip(((IEnumerable<TSecond>)second), selector).AsParallel();
+                return ((IEnumerable<TFirst>)first).Zip(((IEnumerable<TSecond>)second), resultSelector).AsParallel();
             else
                 return new ZipQueryOperator<TFirst, TSecond, TResult>(first, second, resultSelector);
         }
