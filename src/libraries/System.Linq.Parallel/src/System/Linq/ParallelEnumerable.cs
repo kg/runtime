@@ -113,6 +113,7 @@ namespace System.Linq
         /// <exception cref="System.ArgumentNullException">
         /// <paramref name="source"/> is a null reference (Nothing in Visual Basic).
         /// </exception>
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static ParallelQuery<TSource> AsParallel<TSource>(this Partitioner<TSource> source)
         {
             if (source == null)
@@ -165,7 +166,10 @@ namespace System.Linq
                 }
             }
 
-            return new OrderingQueryOperator<TSource>(QueryOperator<TSource>.AsQueryOperator(source), true);
+            if (OperatingSystem.IsBrowser())
+                return source;
+            else
+                return new OrderingQueryOperator<TSource>(QueryOperator<TSource>.AsQueryOperator(source), true);
         }
 
         /// <summary>
@@ -199,7 +203,10 @@ namespace System.Linq
                 throw new InvalidOperationException(SR.ParallelQuery_InvalidNonGenericAsOrderedCall);
             }
 
-            return new OrderingQueryOperator<object?>(QueryOperator<object?>.AsQueryOperator(wrapper), true);
+            if (OperatingSystem.IsBrowser())
+                return source;
+            else
+                return new OrderingQueryOperator<object?>(QueryOperator<object?>.AsQueryOperator(wrapper), true);
         }
 
         /// <summary>
@@ -222,7 +229,10 @@ namespace System.Linq
                 throw new ArgumentNullException(nameof(source));
             }
 
-            return new OrderingQueryOperator<TSource>(QueryOperator<TSource>.AsQueryOperator(source), false);
+            if (OperatingSystem.IsBrowser())
+                return source;
+            else
+                return new OrderingQueryOperator<TSource>(QueryOperator<TSource>.AsQueryOperator(source), false);
         }
 
         /// <summary>
@@ -304,6 +314,9 @@ namespace System.Linq
                 throw new ArgumentOutOfRangeException(nameof(degreeOfParallelism));
             }
 
+            if (OperatingSystem.IsBrowser())
+                return source;
+
             QuerySettings settings = QuerySettings.Empty;
             settings.DegreeOfParallelism = degreeOfParallelism;
 
@@ -328,6 +341,9 @@ namespace System.Linq
         public static ParallelQuery<TSource> WithCancellation<TSource>(this ParallelQuery<TSource> source, CancellationToken cancellationToken)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+
+            if (OperatingSystem.IsBrowser())
+                return source;
 
             QuerySettings settings = QuerySettings.Empty;
             settings.CancellationState = new CancellationState(cancellationToken);
@@ -360,6 +376,9 @@ namespace System.Linq
             {
                 throw new ArgumentException(SR.ParallelEnumerable_WithQueryExecutionMode_InvalidMode);
             }
+
+            if (OperatingSystem.IsBrowser())
+                return source;
 
             QuerySettings settings = QuerySettings.Empty;
             settings.ExecutionMode = executionMode;
@@ -395,6 +414,9 @@ namespace System.Linq
             {
                 throw new ArgumentException(SR.ParallelEnumerable_WithMergeOptions_InvalidOptions);
             }
+
+            if (OperatingSystem.IsBrowser())
+                return source;
 
             QuerySettings settings = QuerySettings.Empty;
             settings.MergeOptions = mergeOptions;

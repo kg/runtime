@@ -56,7 +56,7 @@ namespace System.Linq
         {
             get {
                 if (_sortOp != null)
-                    return _sortOp;
+                    return (IOrderedEnumerable<TSource>)_sortOp;
                 else if (_browser != null)
                     return _browser;
                 else
