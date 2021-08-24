@@ -644,7 +644,7 @@ namespace System.Linq
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TFirst>)source).Zip(((IEnumerable<TSecond>)second), selector);
+                return ((IEnumerable<TFirst>)source).Zip(((IEnumerable<TSecond>)second), selector).AsParallel();
             else
                 return new ZipQueryOperator<TFirst, TSecond, TResult>(first, second, resultSelector);
         }
@@ -772,7 +772,7 @@ namespace System.Linq
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TOuter>)outer).Join(inner, outerKeySelector, innerKeySelector, resultSelector, comparer);
+                return ((IEnumerable<TOuter>)outer).Join(inner, outerKeySelector, innerKeySelector, resultSelector, comparer).AsParallel();
             else
                 return new JoinQueryOperator<TOuter, TInner, TKey, TResult>(
                     outer, inner, outerKeySelector, innerKeySelector, resultSelector, comparer);
@@ -909,7 +909,7 @@ namespace System.Linq
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TOuter>)outer).GroupJoin(inner, outerKeySelector, innerKeySelector, resultSelector, comparer);
+                return ((IEnumerable<TOuter>)outer).GroupJoin(inner, outerKeySelector, innerKeySelector, resultSelector, comparer).AsParallel();
             else
                 return new GroupJoinQueryOperator<TOuter, TInner, TKey, TResult>(outer, inner,
                     outerKeySelector, innerKeySelector, resultSelector, comparer);
@@ -972,7 +972,7 @@ namespace System.Linq
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).SelectMany(selector);
+                return ((IEnumerable<TSource>)source).SelectMany(selector).AsParallel();
             else
                 return new SelectManyQueryOperator<TSource, TResult, TResult>(source, selector, null, null);
         }
@@ -998,7 +998,7 @@ namespace System.Linq
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).SelectMany(selector);
+                return ((IEnumerable<TSource>)source).SelectMany(selector).AsParallel();
             else
                 return new SelectManyQueryOperator<TSource, TResult, TResult>(source, null, selector, null);
         }
@@ -1032,7 +1032,7 @@ namespace System.Linq
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).SelectMany(collectionSelector, resultSelector);
+                return ((IEnumerable<TSource>)source).SelectMany(collectionSelector, resultSelector).AsParallel();
             else
                 return new SelectManyQueryOperator<TSource, TCollection, TResult>(source, collectionSelector, null, resultSelector);
         }
@@ -1071,7 +1071,7 @@ namespace System.Linq
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).SelectMany(collectionSelector, resultSelector);
+                return ((IEnumerable<TSource>)source).SelectMany(collectionSelector, resultSelector).AsParallel();
             else
                 return new SelectManyQueryOperator<TSource, TCollection, TResult>(source, null, collectionSelector, resultSelector);
         }
@@ -1107,9 +1107,9 @@ namespace System.Linq
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).OrderBy(keySelector);
+                return new OrderedParallelQuery<TSource>(((IEnumerable<TSource>)source).OrderBy(keySelector));
             else
-                return new OrderedParallelQuery<TSource>(
+                return new OrderedParallelQuery<TSource>((QueryOperator<TSource>)
                     new SortQueryOperator<TSource, TKey>(source, keySelector, null, false));
         }
 
@@ -1138,9 +1138,9 @@ namespace System.Linq
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).OrderBy(keySelector, comparer);
+                return new OrderedParallelQuery<TSource>(((IEnumerable<TSource>)source).OrderBy(keySelector, comparer));
             else
-                return new OrderedParallelQuery<TSource>(
+                return new OrderedParallelQuery<TSource>((QueryOperator<TSource>)
                     new SortQueryOperator<TSource, TKey>(source, keySelector, comparer, false));
         }
 
@@ -1168,9 +1168,10 @@ namespace System.Linq
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).OrderByDescending(keySelector);
+                return new OrderedParallelQuery<TSource>(((IEnumerable<TSource>)source).OrderByDescending(keySelector));
             else
-                return new OrderedParallelQuery<TSource>(new SortQueryOperator<TSource, TKey>(source, keySelector, null, true));
+                return new OrderedParallelQuery<TSource>((QueryOperator<TSource>)
+                    new SortQueryOperator<TSource, TKey>(source, keySelector, null, true));
         }
 
         /// <summary>
@@ -1198,9 +1199,9 @@ namespace System.Linq
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).OrderByDescending(keySelector, comparer);
+                return new OrderedParallelQuery<TSource>(((IEnumerable<TSource>)source).OrderByDescending(keySelector, comparer));
             else
-                return new OrderedParallelQuery<TSource>(
+                return new OrderedParallelQuery<TSource>((QueryOperator<TSource>)
                     new SortQueryOperator<TSource, TKey>(source, keySelector, comparer, true));
         }
 
@@ -4204,7 +4205,7 @@ namespace System.Linq
             if (count > 0)
             {
                 if (OperatingSystem.IsBrowser())
-                    return ((IEnumerable<TSource>)source).Take(count);
+                    return ((IEnumerable<TSource>)source).Take(count).AsParallel();
                 else
                     return new TakeOrSkipQueryOperator<TSource>(source, count, true);
             }
@@ -4238,7 +4239,7 @@ namespace System.Linq
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).TakeWhile(predicate);
+                return ((IEnumerable<TSource>)source).TakeWhile(predicate).AsParallel();
 
             return new TakeOrSkipWhileQueryOperator<TSource>(source, predicate, null, true);
         }
@@ -4266,7 +4267,7 @@ namespace System.Linq
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).TakeWhile(predicate);
+                return ((IEnumerable<TSource>)source).TakeWhile(predicate).AsParallel();
 
             return new TakeOrSkipWhileQueryOperator<TSource>(source, null, predicate, true);
         }
@@ -4293,7 +4294,7 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).Skip(count);
+                return ((IEnumerable<TSource>)source).Skip(count).AsParallel();
 
             // If the count is 0 (or less) we just return the whole stream.
             if (count <= 0)
@@ -4329,7 +4330,7 @@ namespace System.Linq
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).SkipWhile(predicate);
+                return ((IEnumerable<TSource>)source).SkipWhile(predicate).AsParallel();
             else
                 return new TakeOrSkipWhileQueryOperator<TSource>(source, predicate, null, false);
         }

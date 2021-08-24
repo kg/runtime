@@ -21,14 +21,27 @@ namespace System.Linq
     public class OrderedParallelQuery<TSource> : ParallelQuery<TSource>
     {
         private readonly QueryOperator<TSource> _sortOp;
+        private readonly IOrderedEnumerable<TSource> _browser;
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal OrderedParallelQuery(QueryOperator<TSource> sortOp)
             : base(sortOp.SpecifiedQuerySettings)
         {
             _sortOp = sortOp;
+            _browser = null;
+            Debug.Assert(!OperatingSystem.IsBrowser());
             Debug.Assert(sortOp is IOrderedEnumerable<TSource>);
         }
 
+        internal OrderedParallelQuery(IOrderedEnumerable<TSource> inner)
+            : base(default)
+        {
+            _sortOp = null;
+            _browser = inner;
+            Debug.Assert(OperatingSystem.IsBrowser());
+        }
+
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal QueryOperator<TSource> SortOperator
         {
             get { return _sortOp; }
@@ -36,7 +49,7 @@ namespace System.Linq
 
         internal IOrderedEnumerable<TSource> OrderedEnumerable
         {
-            get { return (IOrderedEnumerable<TSource>)_sortOp; }
+            get { return _browser ?? (IOrderedEnumerable<TSource>)_sortOp; }
         }
 
         /// <summary>
@@ -45,7 +58,7 @@ namespace System.Linq
         /// <returns>An enumerator that iterates through the sequence.</returns>
         public override IEnumerator<TSource> GetEnumerator()
         {
-            return _sortOp.GetEnumerator();
+            return (_browser ?? _sortOp).GetEnumerator();
         }
     }
 }
