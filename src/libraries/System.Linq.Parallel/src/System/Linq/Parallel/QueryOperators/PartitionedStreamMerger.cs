@@ -15,6 +15,7 @@ namespace System.Linq.Parallel
     /// <summary>
     /// Partitioned stream recipient that will merge the results.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class PartitionedStreamMerger<TOutput> : IPartitionedStreamRecipient<TOutput>
     {
         private readonly bool _forEffectMerge;

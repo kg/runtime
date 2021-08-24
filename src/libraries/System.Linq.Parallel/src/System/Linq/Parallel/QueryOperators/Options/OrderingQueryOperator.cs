@@ -17,6 +17,7 @@ namespace System.Linq.Parallel
     /// simply turns on preservation globally in the query.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class OrderingQueryOperator<TSource> : QueryOperator<TSource>
     {
         private readonly QueryOperator<TSource> _child;

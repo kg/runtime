@@ -35,6 +35,7 @@ namespace System.Linq.Parallel
     /// <typeparam name="THashKey"></typeparam>
     /// <typeparam name="TOutput"></typeparam>
     /// <typeparam name="TOutputKey"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class HashJoinQueryOperatorEnumerator<TLeftInput, TLeftKey, TRightInput, TRightKey, THashKey, TOutput, TOutputKey>
         : QueryOperatorEnumerator<TOutput, TOutputKey>
     {

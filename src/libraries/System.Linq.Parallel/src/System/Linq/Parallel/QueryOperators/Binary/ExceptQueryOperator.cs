@@ -19,6 +19,7 @@ namespace System.Linq.Parallel
     /// This is known as the set relative complement, i.e. left - right.
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ExceptQueryOperator<TInputOutput> :
         BinaryQueryOperator<TInputOutput, TInputOutput, TInputOutput>
     {

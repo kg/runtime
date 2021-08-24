@@ -19,6 +19,7 @@ namespace System.Linq.Parallel
     /// analysis -- it should never actually get opened.
     /// </summary>
     /// <typeparam name="TElement"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ScanQueryOperator<TElement> : QueryOperator<TElement>
     {
         private readonly IEnumerable<TElement> _data; // The actual data source to scan.

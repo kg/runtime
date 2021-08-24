@@ -24,6 +24,7 @@ namespace System.Linq.Parallel
     /// precisely what we want.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ConcatQueryOperator<TSource> : BinaryQueryOperator<TSource, TSource, TSource>
     {
         private readonly bool _prematureMergeLeft; // Whether to prematurely merge the left data source

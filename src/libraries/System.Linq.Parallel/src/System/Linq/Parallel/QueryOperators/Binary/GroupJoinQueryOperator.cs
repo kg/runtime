@@ -23,6 +23,7 @@ namespace System.Linq.Parallel
     /// <typeparam name="TRightInput"></typeparam>
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TOutput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class GroupJoinQueryOperator<TLeftInput, TRightInput, TKey, TOutput> : BinaryQueryOperator<TLeftInput, TRightInput, TOutput>
     {
         private readonly Func<TLeftInput, TKey> _leftKeySelector; // The key selection routine for the outer (left) data source.
