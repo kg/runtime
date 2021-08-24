@@ -2996,7 +2996,11 @@ namespace System.Linq
         public static int Max(this ParallelQuery<int> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new IntMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<int>)source).Max();
+            else
+                return new IntMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3016,7 +3020,11 @@ namespace System.Linq
         public static int? Max(this ParallelQuery<int?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableIntMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<int?>)source).Max();
+            else
+                return new NullableIntMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3039,7 +3047,11 @@ namespace System.Linq
         public static long Max(this ParallelQuery<long> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new LongMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<long>)source).Max();
+            else
+                return new LongMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3059,7 +3071,11 @@ namespace System.Linq
         public static long? Max(this ParallelQuery<long?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableLongMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<long?>)source).Max();
+            else
+                return new NullableLongMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3082,7 +3098,11 @@ namespace System.Linq
         public static float Max(this ParallelQuery<float> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new FloatMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<float>)source).Max();
+            else
+                return new FloatMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3102,7 +3122,11 @@ namespace System.Linq
         public static float? Max(this ParallelQuery<float?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableFloatMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<float?>)source).Max();
+            else
+                return new NullableFloatMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3125,7 +3149,11 @@ namespace System.Linq
         public static double Max(this ParallelQuery<double> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DoubleMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<double>)source).Max();
+            else
+                return new DoubleMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3145,7 +3173,11 @@ namespace System.Linq
         public static double? Max(this ParallelQuery<double?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableDoubleMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<double?>)source).Max();
+            else
+                return new NullableDoubleMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3168,7 +3200,11 @@ namespace System.Linq
         public static decimal Max(this ParallelQuery<decimal> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DecimalMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<decimal>)source).Max();
+            else
+                return new DecimalMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3188,7 +3224,11 @@ namespace System.Linq
         public static decimal? Max(this ParallelQuery<decimal?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableDecimalMinMaxAggregationOperator(source, 1).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<decimal?>)source).Max();
+            else
+                return new NullableDecimalMinMaxAggregationOperator(source, 1).Aggregate();
         }
 
         /// <summary>
@@ -3211,7 +3251,11 @@ namespace System.Linq
         public static TSource? Max<TSource>(this ParallelQuery<TSource> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return AggregationMinMaxHelpers<TSource>.ReduceMax(source);
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Max();
+            else
+                return AggregationMinMaxHelpers<TSource>.ReduceMax(source);
         }
 
         /// <summary>
@@ -5593,7 +5637,7 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).FirstOrDefault(predicate);
+                return ((IEnumerable<TSource>)source).FirstOrDefault();
 
             // @PERF: optimize for seekable data sources.  E.g. if an array, we can
             //     seek directly to the 0th element.
@@ -6018,10 +6062,7 @@ namespace System.Linq
         public static ParallelQuery<TSource> DefaultIfEmpty<TSource>(this ParallelQuery<TSource> source, TSource defaultValue)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).DefaultIfEmpty(defaultValue);
-            else
-                return new DefaultIfEmptyQueryOperator<TSource>(source, defaultValue);
+            return new DefaultIfEmptyQueryOperator<TSource>(source, defaultValue);
         }
 
         //-----------------------------------------------------------------------------------
