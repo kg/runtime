@@ -121,6 +121,7 @@ namespace System.Linq.Parallel
         // The enumerator will be "opened", which means that PLINQ will start executing the query
         // immediately, even before the user calls MoveNext() for the first time.
         //
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal IEnumerator<TOutput>? GetOpenedEnumerator(ParallelMergeOptions? mergeOptions, bool suppressOrder, bool forEffect,
             QuerySettings querySettings)
         {
@@ -191,6 +192,7 @@ namespace System.Linq.Parallel
         // Executes the query and returns the results in an array.
         //
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal TOutput[] ExecuteAndGetResultsAsArray()
         {
             QuerySettings querySettings =
@@ -280,6 +282,7 @@ namespace System.Linq.Parallel
         // the results as ListQueryResults<TSource>.
         //
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal static ListQueryResults<TOutput> ExecuteAndCollectResults<TKey>(
             PartitionedStream<TOutput, TKey> openedChild,
             int partitionCount,

@@ -125,6 +125,7 @@ namespace System.Linq.Parallel
         }
     }
 
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class SortQueryOperatorResults<TInputOutput, TSortKey> : QueryResults<TInputOutput>
     {
         private QueryResults<TInputOutput> _childQueryResults; // Results of the child query
@@ -174,6 +175,7 @@ namespace System.Linq.Parallel
     // This enumerator performs sorting based on a key selection and comparison routine.
     //
 
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class SortQueryOperatorEnumerator<TInputOutput, TKey, TSortKey> : QueryOperatorEnumerator<TInputOutput, TSortKey>
     {
         private readonly QueryOperatorEnumerator<TInputOutput, TKey>? _source; // Data source to sort.

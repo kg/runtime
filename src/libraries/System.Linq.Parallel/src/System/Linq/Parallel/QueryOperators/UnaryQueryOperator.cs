@@ -90,6 +90,7 @@ namespace System.Linq.Parallel
         // unless a derived class provides that functionality.
         //
 
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal class UnaryQueryOperatorResults : QueryResults<TOutput>
         {
             protected QueryResults<TInput> _childQueryResults; // Results of the child query

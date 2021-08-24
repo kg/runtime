@@ -22,6 +22,7 @@ namespace System.Linq.Parallel
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
     /// <typeparam name="TKey"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class OrderPreservingSpoolingTask<TInputOutput, TKey> : SpoolingTaskBase
     {
         private readonly Shared<TInputOutput[]?> _results; // The destination array cell into which data is placed.
