@@ -17,6 +17,7 @@ namespace System.Linq.Parallel
     /// ExchangeUtilities is a static class that contains helper functions to partition and merge
     /// streams.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal static class ExchangeUtilities
     {
         //-----------------------------------------------------------------------------------

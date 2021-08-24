@@ -12,6 +12,7 @@ using System.Threading;
 
 namespace System.Linq.Parallel
 {
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class UnorderedHashRepartitionStream<TInputOutput, THashKey, TIgnoreKey> : HashRepartitionStream<TInputOutput, THashKey, int>
     {
         //---------------------------------------------------------------------------------------

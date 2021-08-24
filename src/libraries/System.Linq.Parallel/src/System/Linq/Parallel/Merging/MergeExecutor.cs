@@ -23,6 +23,7 @@ namespace System.Linq.Parallel
     /// order preserving merge, and so forth.
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class MergeExecutor<TInputOutput> : IEnumerable<TInputOutput>
     {
         // Many internal algorithms are parameterized based on the data. The IMergeHelper

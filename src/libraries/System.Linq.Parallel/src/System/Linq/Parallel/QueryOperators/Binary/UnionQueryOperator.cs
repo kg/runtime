@@ -18,6 +18,7 @@ namespace System.Linq.Parallel
     /// Operator that yields the union of two data sources.
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class UnionQueryOperator<TInputOutput> :
         BinaryQueryOperator<TInputOutput, TInputOutput, TInputOutput>
     {

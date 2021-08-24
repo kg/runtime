@@ -554,7 +554,7 @@ namespace System.Linq
 
             throw new Exception("Where should fail");
 
-            return new IndexedWhereQueryOperator<TSource>(source, predicate);
+            // return new IndexedWhereQueryOperator<TSource>(source, predicate);
         }
 
         //-----------------------------------------------------------------------------------
@@ -580,11 +580,9 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
 
-            asfas
-
             throw new Exception("Select should fail");
 
-            return new SelectQueryOperator<TSource, TResult>(source, selector);
+            // return new SelectQueryOperator<TSource, TResult>(source, selector);
         }
 
         /// <summary>
@@ -604,8 +602,6 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (selector == null) throw new ArgumentNullException(nameof(selector));
-
-            throw new Exception("Select should fail");
 
             return new IndexedSelectQueryOperator<TSource, TResult>(source, selector);
         }

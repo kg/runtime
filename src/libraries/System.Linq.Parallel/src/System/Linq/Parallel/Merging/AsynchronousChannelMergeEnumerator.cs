@@ -26,6 +26,7 @@ namespace System.Linq.Parallel
     ///
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class AsynchronousChannelMergeEnumerator<T> : MergeEnumerator<T>
     {
         private readonly AsynchronousChannel<T>[] _channels; // The channels being enumerated.

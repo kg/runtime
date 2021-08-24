@@ -16,6 +16,7 @@ namespace System.Linq.Parallel
     /// <summary>
     /// A factory class to execute spooling logic.
     /// </summary>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal static class SpoolingTask
     {
         //-----------------------------------------------------------------------------------
@@ -175,6 +176,7 @@ namespace System.Linq.Parallel
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
     /// <typeparam name="TIgnoreKey"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class StopAndGoSpoolingTask<TInputOutput, TIgnoreKey> : SpoolingTaskBase
     {
         // The data source from which to pull data.
@@ -264,6 +266,7 @@ namespace System.Linq.Parallel
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
     /// <typeparam name="TIgnoreKey"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class PipelineSpoolingTask<TInputOutput, TIgnoreKey> : SpoolingTaskBase
     {
         // The data source from which to pull data.
@@ -355,6 +358,7 @@ namespace System.Linq.Parallel
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
     /// <typeparam name="TIgnoreKey"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ForAllSpoolingTask<TInputOutput, TIgnoreKey> : SpoolingTaskBase
     {
         // The data source from which to pull data.

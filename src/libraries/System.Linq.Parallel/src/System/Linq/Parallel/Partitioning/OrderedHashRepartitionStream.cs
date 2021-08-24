@@ -12,6 +12,7 @@ using System.Threading;
 
 namespace System.Linq.Parallel
 {
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class OrderedHashRepartitionStream<TInputOutput, THashKey, TOrderKey> : HashRepartitionStream<TInputOutput, THashKey, TOrderKey>
     {
         internal OrderedHashRepartitionStream(

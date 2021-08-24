@@ -32,6 +32,7 @@ namespace System.Linq.Parallel
         internal abstract TInputOutput[] Sort();
     }
 
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class SortHelper<TInputOutput, TKey> : SortHelper<TInputOutput>, IDisposable
     {
         private readonly QueryOperatorEnumerator<TInputOutput, TKey> _source; // The data source from which to pull data.

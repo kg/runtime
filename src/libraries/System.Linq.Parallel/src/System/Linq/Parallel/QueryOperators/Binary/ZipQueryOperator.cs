@@ -24,6 +24,7 @@ namespace System.Linq.Parallel
     /// <typeparam name="TLeftInput"></typeparam>
     /// <typeparam name="TRightInput"></typeparam>
     /// <typeparam name="TOutput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ZipQueryOperator<TLeftInput, TRightInput, TOutput>
         : QueryOperator<TOutput>
     {

@@ -22,6 +22,7 @@ namespace System.Linq.Parallel
     ///
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class LastQueryOperator<TSource> : UnaryQueryOperator<TSource, TSource>
     {
         private readonly Func<TSource, bool>? _predicate; // The optional predicate used during the search.
