@@ -4359,7 +4359,7 @@ namespace System.Linq
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).SkipWhile(predicate);
+                return ((IEnumerable<TSource>)source).SkipWhile(predicate).AsParallel();
             else
                 return new TakeOrSkipWhileQueryOperator<TSource>(source, null, predicate, false);
         }
@@ -4388,7 +4388,7 @@ namespace System.Linq
             if (second == null) throw new ArgumentNullException(nameof(second));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)first).Concat(second);
+                return ((IEnumerable<TSource>)first).Concat(second).AsParallel();
             else
                 return new ConcatQueryOperator<TSource>(first, second);
         }
@@ -4675,7 +4675,7 @@ namespace System.Linq
             if (second == null) throw new ArgumentNullException(nameof(second));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)first).Union(second, comparer);
+                return ((IEnumerable<TSource>)first).Union(second, comparer).AsParallel();
             else
                 return new UnionQueryOperator<TSource>(first, second, comparer);
         }
@@ -4773,7 +4773,7 @@ namespace System.Linq
             if (second == null) throw new ArgumentNullException(nameof(second));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)first).Intersect(second, comparer);
+                return ((IEnumerable<TSource>)first).Intersect(second, comparer).AsParallel();
             else
                 return new IntersectQueryOperator<TSource>(first, second, comparer);
         }
@@ -4872,7 +4872,7 @@ namespace System.Linq
             if (second == null) throw new ArgumentNullException(nameof(second));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)first).Except(second, comparer);
+                return ((IEnumerable<TSource>)first).Except(second, comparer).AsParallel();
             else
                 return new ExceptQueryOperator<TSource>(first, second, comparer);
         }
@@ -5421,7 +5421,7 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
 
             if (OperatingSystem.IsBrowser())
-                return ((IEnumerable<TSource>)source).Reverse();
+                return ((IEnumerable<TSource>)source).Reverse().AsParallel();
             else
                 return new ReverseQueryOperator<TSource>(source);
         }
@@ -6062,7 +6062,10 @@ namespace System.Linq
         public static ParallelQuery<TSource> DefaultIfEmpty<TSource>(this ParallelQuery<TSource> source, TSource defaultValue)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DefaultIfEmptyQueryOperator<TSource>(source, defaultValue);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).DefaultIfEmpty(defaultValue).AsParallel();
+            else
+                return new DefaultIfEmptyQueryOperator<TSource>(source, defaultValue);
         }
 
         //-----------------------------------------------------------------------------------

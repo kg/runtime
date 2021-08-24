@@ -89,7 +89,7 @@ namespace System.Linq.Parallel
         // Implementation of QueryResults for an unary operator. The results will not be indexable
         // unless a derived class provides that functionality.
         //
-        
+
         internal class UnaryQueryOperatorResults : QueryResults<TOutput>
         {
             protected QueryResults<TInput> _childQueryResults; // Results of the child query
