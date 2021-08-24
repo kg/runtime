@@ -113,6 +113,7 @@ namespace System.Linq
         /// <exception cref="System.ArgumentNullException">
         /// <paramref name="source"/> is a null reference (Nothing in Visual Basic).
         /// </exception>
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static ParallelQuery<TSource> AsParallel<TSource>(this Partitioner<TSource> source)
         {
             if (source == null)
@@ -519,6 +520,7 @@ namespace System.Linq
         /// <exception cref="System.OperationCanceledException">
         /// The query was canceled.
         /// </exception>
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static void ForAll<TSource>(this ParallelQuery<TSource> source, Action<TSource> action)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
@@ -1614,6 +1616,7 @@ namespace System.Linq
         // Return Value:
         //     The result of aggregation.
         //
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         private static T PerformAggregation<T>(this ParallelQuery<T> source,
             Func<T, T, T> reduce, T seed, bool seedIsSpecified, bool throwIfEmpty, QueryAggregationOptions options)
         {
@@ -1717,7 +1720,7 @@ namespace System.Linq
             if (func == null) throw new ArgumentNullException(nameof(func));
             if ((~(QueryAggregationOptions.Associative | QueryAggregationOptions.Commutative) & options) != 0) throw new ArgumentOutOfRangeException(nameof(options));
 
-            if ((options & QueryAggregationOptions.Associative) != QueryAggregationOptions.Associative)
+            if (OperatingSystem.IsBrowser() || ((options & QueryAggregationOptions.Associative) != QueryAggregationOptions.Associative))
             {
                 // Non associative aggregations must be run sequentially.  We run the query in parallel
                 // and then perform the reduction over the resulting list.
@@ -1855,9 +1858,13 @@ namespace System.Linq
             if (combineAccumulatorsFunc == null) throw new ArgumentNullException(nameof(combineAccumulatorsFunc));
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return new AssociativeAggregationOperator<TSource, TAccumulate, TResult>(
-                source, seed, null, true, updateAccumulatorFunc, combineAccumulatorsFunc, resultSelector,
-                false, QueryAggregationOptions.AssociativeCommutative).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                // FIXME: What do we do with combineAccumulatorsFunc?
+                return ((IEnumerable<TSource>)source).Aggregate(seed, updateAccumulatorFunc, resultSelector);
+            else
+                return new AssociativeAggregationOperator<TSource, TAccumulate, TResult>(
+                    source, seed, null, true, updateAccumulatorFunc, combineAccumulatorsFunc, resultSelector,
+                    false, QueryAggregationOptions.AssociativeCommutative).Aggregate();
         }
 
         /// <summary>
@@ -2014,6 +2021,9 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).LongCount();
+
             // If the data source is a collection, we can just return the count right away.
             if (source is ParallelEnumerableWrapper<TSource> sourceAsWrapper)
             {
@@ -2053,8 +2063,11 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            // Construct a where operator to filter out non-matching elements, and then aggregate.
-            return new LongCountAggregationOperator<TSource>(Where<TSource>(source, predicate)).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).LongCount(predicate);
+            else
+                // Construct a where operator to filter out non-matching elements, and then aggregate.
+                return new LongCountAggregationOperator<TSource>(Where<TSource>(source, predicate)).Aggregate();
         }
 
         //-----------------------------------------------------------------------------------
@@ -2080,7 +2093,11 @@ namespace System.Linq
         public static int Sum(this ParallelQuery<int> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new IntSumAggregationOperator(source).Aggregate();
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<int>)source).Sum();
+            else
+                return new IntSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2102,7 +2119,10 @@ namespace System.Linq
         public static int? Sum(this ParallelQuery<int?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableIntSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<int?>)source).Sum();
+            else
+                return new NullableIntSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2124,7 +2144,10 @@ namespace System.Linq
         public static long Sum(this ParallelQuery<long> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new LongSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<long>)source).Sum();
+            else
+                return new LongSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2146,7 +2169,10 @@ namespace System.Linq
         public static long? Sum(this ParallelQuery<long?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableLongSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<long?>)source).Sum();
+            else
+                return new NullableLongSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2166,7 +2192,10 @@ namespace System.Linq
         public static float Sum(this ParallelQuery<float> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new FloatSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<float>)source).Sum();
+            else
+                return new FloatSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2186,7 +2215,10 @@ namespace System.Linq
         public static float? Sum(this ParallelQuery<float?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableFloatSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<float?>)source).Sum();
+            else
+                return new NullableFloatSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2206,7 +2238,10 @@ namespace System.Linq
         public static double Sum(this ParallelQuery<double> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DoubleSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<double>)source).Sum();
+            else
+                return new DoubleSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2226,7 +2261,10 @@ namespace System.Linq
         public static double? Sum(this ParallelQuery<double?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableDoubleSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<double?>)source).Sum();
+            else
+                return new NullableDoubleSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2248,7 +2286,10 @@ namespace System.Linq
         public static decimal Sum(this ParallelQuery<decimal> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DecimalSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<decimal>)source).Sum();
+            else
+                return new DecimalSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>
@@ -2270,7 +2311,10 @@ namespace System.Linq
         public static decimal? Sum(this ParallelQuery<decimal?> source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new NullableDecimalSumAggregationOperator(source).Aggregate();
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<decimal?>)source).Sum();
+            else
+                return new NullableDecimalSumAggregationOperator(source).Aggregate();
         }
 
         /// <summary>

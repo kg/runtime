@@ -24,6 +24,7 @@ namespace System.Linq.Parallel
     /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TIntermediate"></typeparam>
     /// <typeparam name="TResult"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal abstract class InlinedAggregationOperator<TSource, TIntermediate, TResult> :
         UnaryQueryOperator<TSource, TIntermediate>
     {

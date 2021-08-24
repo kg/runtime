@@ -44,6 +44,7 @@ namespace System.Linq.Parallel
     /// <typeparam name="TInput"></typeparam>
     /// <typeparam name="TIntermediate"></typeparam>
     /// <typeparam name="TOutput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class AssociativeAggregationOperator<TInput, TIntermediate, TOutput> : UnaryQueryOperator<TInput, TIntermediate>
     {
         private readonly TIntermediate _seed; // A seed used during aggregation.
