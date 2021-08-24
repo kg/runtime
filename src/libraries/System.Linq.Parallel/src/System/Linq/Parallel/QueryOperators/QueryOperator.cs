@@ -110,6 +110,7 @@ namespace System.Linq.Parallel
 
         internal virtual IEnumerator<TOutput> GetEnumerator(ParallelMergeOptions? mergeOptions, bool suppressOrderPreservation)
         {
+            Debug.Assert(!OperatingSystem.IsBrowser());
             // Return a dummy enumerator that will call back GetOpenedEnumerator() on 'this' QueryOperator
             // the first time the user calls MoveNext(). We do this to prevent executing the query if user
             // never calls MoveNext().
@@ -121,10 +122,10 @@ namespace System.Linq.Parallel
         // The enumerator will be "opened", which means that PLINQ will start executing the query
         // immediately, even before the user calls MoveNext() for the first time.
         //
-        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         internal IEnumerator<TOutput>? GetOpenedEnumerator(ParallelMergeOptions? mergeOptions, bool suppressOrder, bool forEffect,
             QuerySettings querySettings)
         {
+            Debug.Assert(!OperatingSystem.IsBrowser());
             Debug.Assert(querySettings.ExecutionMode != null);
             // If the top-level enumerator forces a premature merge, run the query sequentially.
             if (querySettings.ExecutionMode.Value == ParallelExecutionMode.Default && LimitsParallelism)

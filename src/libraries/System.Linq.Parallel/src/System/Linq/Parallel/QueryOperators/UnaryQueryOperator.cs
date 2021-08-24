@@ -34,11 +34,13 @@ namespace System.Linq.Parallel
         internal UnaryQueryOperator(IEnumerable<TInput> child)
             : this(QueryOperator<TInput>.AsQueryOperator(child))
         {
+            Debug.Assert(!OperatingSystem.IsBrowser());
         }
 
         internal UnaryQueryOperator(IEnumerable<TInput> child, bool outputOrdered)
             : this(QueryOperator<TInput>.AsQueryOperator(child), outputOrdered)
         {
+            Debug.Assert(!OperatingSystem.IsBrowser());
         }
 
         private UnaryQueryOperator(QueryOperator<TInput> child)

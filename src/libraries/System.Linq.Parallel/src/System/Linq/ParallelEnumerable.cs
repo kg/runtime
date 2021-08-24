@@ -151,6 +151,9 @@ namespace System.Linq
                 throw new ArgumentNullException(nameof(source));
             }
 
+            if (OperatingSystem.IsBrowser())
+                return source;
+
             if (!(source is ParallelEnumerableWrapper<TSource> || source is IParallelPartitionable<TSource>))
             {
                 if (source is PartitionerQueryOperator<TSource>  partitionerOp)
@@ -166,10 +169,7 @@ namespace System.Linq
                 }
             }
 
-            if (OperatingSystem.IsBrowser())
-                return source;
-            else
-                return new OrderingQueryOperator<TSource>(QueryOperator<TSource>.AsQueryOperator(source), true);
+            return new OrderingQueryOperator<TSource>(QueryOperator<TSource>.AsQueryOperator(source), true);
         }
 
         /// <summary>
@@ -1253,8 +1253,11 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new OrderedParallelQuery<TSource>(
-                (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, null, false));
+            if (OperatingSystem.IsBrowser())
+                return new OrderedParallelQuery<TSource>(((IOrderedEnumerable<TSource>)source).ThenBy(keySelector));
+            else
+                return new OrderedParallelQuery<TSource>(
+                    (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, null, false));
         }
         /// <summary>
         /// Performs in parallel a subsequent ordering of the elements in a sequence in
@@ -1284,8 +1287,11 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new OrderedParallelQuery<TSource>(
-                (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, comparer, false));
+            if (OperatingSystem.IsBrowser())
+                return new OrderedParallelQuery<TSource>(((IOrderedEnumerable<TSource>)source).ThenBy(keySelector, comparer));
+            else
+                return new OrderedParallelQuery<TSource>(
+                    (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, comparer, false));
         }
         /// <summary>
         /// Performs in parallel a subsequent ordering of the elements in a sequence in
@@ -1314,8 +1320,11 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new OrderedParallelQuery<TSource>(
-                (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, null, true));
+            if (OperatingSystem.IsBrowser())
+                return new OrderedParallelQuery<TSource>(((IOrderedEnumerable<TSource>)source).ThenByDescending(keySelector));
+            else
+                return new OrderedParallelQuery<TSource>(
+                    (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, null, true));
         }
         /// <summary>
         /// Performs in parallel a subsequent ordering of the elements in a sequence in descending
@@ -1344,8 +1353,12 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
-            return new OrderedParallelQuery<TSource>(
-                (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, comparer, true));
+
+            if (OperatingSystem.IsBrowser())
+                return new OrderedParallelQuery<TSource>(((IOrderedEnumerable<TSource>)source).ThenByDescending(keySelector, comparer));
+            else
+                return new OrderedParallelQuery<TSource>(
+                    (QueryOperator<TSource>)source.OrderedEnumerable.CreateOrderedEnumerable<TKey>(keySelector, comparer, true));
         }
 
         //-----------------------------------------------------------------------------------
@@ -1391,7 +1404,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
-            return new GroupByQueryOperator<TSource, TKey, TSource>(source, keySelector, null, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).GroupBy(keySelector, comparer).AsParallel();
+            else
+                return new GroupByQueryOperator<TSource, TKey, TSource>(source, keySelector, null, comparer);
         }
 
         /// <summary>
@@ -1445,7 +1461,10 @@ namespace System.Linq
             if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
             if (elementSelector == null) throw new ArgumentNullException(nameof(elementSelector));
 
-            return new GroupByQueryOperator<TSource, TKey, TElement>(source, keySelector, elementSelector, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).GroupBy(keySelector, elementSelector, comparer).AsParallel();
+            else
+                return new GroupByQueryOperator<TSource, TKey, TElement>(source, keySelector, elementSelector, comparer);
         }
 
         //
@@ -1483,8 +1502,12 @@ namespace System.Linq
         {
             if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
-            return source.GroupBy<TSource, TKey>(keySelector)
-                .Select<IGrouping<TKey, TSource>, TResult>(delegate (IGrouping<TKey, TSource> grouping) { return resultSelector(grouping.Key, grouping); });
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).GroupBy(keySelector)
+                    .Select<IGrouping<TKey, TSource>, TResult>(delegate (IGrouping<TKey, TSource> grouping) { return resultSelector(grouping.Key, grouping); }).AsParallel();
+            else
+                return source.GroupBy<TSource, TKey>(keySelector)
+                    .Select<IGrouping<TKey, TSource>, TResult>(delegate (IGrouping<TKey, TSource> grouping) { return resultSelector(grouping.Key, grouping); });
         }
 
         /// <summary>
@@ -4635,7 +4658,10 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return new DistinctQueryOperator<TSource>(source, comparer);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Distinct(comparer).AsParallel();
+            else
+                return new DistinctQueryOperator<TSource>(source, comparer);
         }
 
         //-----------------------------------------------------------------------------------

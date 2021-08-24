@@ -75,6 +75,7 @@ namespace System.Linq.Parallel
                                                 Func<TIntermediate, TOutput> resultSelector, bool throwIfEmpty, QueryAggregationOptions options)
             : base(child)
         {
+            Debug.Assert(!OperatingSystem.IsBrowser());
             Debug.Assert(child != null, "child data source cannot be null");
             Debug.Assert(intermediateReduce != null, "need an intermediate reduce function");
             Debug.Assert(finalReduce != null, "need a final reduce function");
