@@ -25,6 +25,7 @@ namespace System.Linq.Parallel
     /// no extra cost for ordering.
     /// </summary>
     /// <typeparam name="TInputOutput"></typeparam>
+    [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
     internal sealed class ArrayMergeHelper<TInputOutput> : IMergeHelper<TInputOutput>
     {
         private readonly QueryResults<TInputOutput> _queryResults; // Indexable query results

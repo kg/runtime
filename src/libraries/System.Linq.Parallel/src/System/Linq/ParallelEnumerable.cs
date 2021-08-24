@@ -5702,6 +5702,9 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).LastOrDefault(predicate);
+
             LastQueryOperator<TSource> queryOp = new LastQueryOperator<TSource>(source, predicate);
 
             // If in conservative mode and a premature merge would be inserted by the First operator,
@@ -5751,7 +5754,10 @@ namespace System.Linq
             //     check the Count property and avoid costly fork/join/synchronization.
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, null), true, false)!;
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Single();
+            else
+                return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, null), true, false)!;
         }
 
         /// <summary>
@@ -5779,7 +5785,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, predicate), true, false)!;
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).Single(predicate);
+            else
+                return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, predicate), true, false)!;
         }
 
         /// <summary>
@@ -5807,7 +5816,10 @@ namespace System.Linq
             //     check the Count property and avoid costly fork/join/synchronization.
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, null), true, true);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SingleOrDefault();
+            else
+                return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, null), true, true);
         }
 
         /// <summary>
@@ -5836,7 +5848,10 @@ namespace System.Linq
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (predicate == null) throw new ArgumentNullException(nameof(predicate));
 
-            return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, predicate), true, true);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).SingleOrDefault(predicate);
+            else
+                return GetOneWithPossibleDefault(new SingleQueryOperator<TSource>(source, predicate), true, true);
         }
 
         //-----------------------------------------------------------------------------------
@@ -5877,7 +5892,10 @@ namespace System.Linq
         public static ParallelQuery<TSource> DefaultIfEmpty<TSource>(this ParallelQuery<TSource> source, TSource defaultValue)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return new DefaultIfEmptyQueryOperator<TSource>(source, defaultValue);
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).DefaultIfEmpty(defaultValue);
+            else
+                return new DefaultIfEmptyQueryOperator<TSource>(source, defaultValue);
         }
 
         //-----------------------------------------------------------------------------------
@@ -5909,6 +5927,9 @@ namespace System.Linq
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ElementAt(index);
 
             // @PERF: there are obvious optimization opportunities for indexable data sources,
             //          since we can just seek to the element requested.
@@ -5947,6 +5968,9 @@ namespace System.Linq
         public static TSource? ElementAtOrDefault<TSource>(this ParallelQuery<TSource> source, int index)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+
+            if (OperatingSystem.IsBrowser())
+                return ((IEnumerable<TSource>)source).ElementAtOrDefault(index);
 
             // @PERF: there are obvious optimization opportunities for indexable data sources,
             //          since we can just seek to the element requested.
