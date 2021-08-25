@@ -113,7 +113,7 @@ namespace System.Linq
         /// <exception cref="System.ArgumentNullException">
         /// <paramref name="source"/> is a null reference (Nothing in Visual Basic).
         /// </exception>
-        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
+        // [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static ParallelQuery<TSource> AsParallel<TSource>(this Partitioner<TSource> source)
         {
             if (source == null)
@@ -520,7 +520,7 @@ namespace System.Linq
         /// <exception cref="System.OperationCanceledException">
         /// The query was canceled.
         /// </exception>
-        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
+        // [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         public static void ForAll<TSource>(this ParallelQuery<TSource> source, Action<TSource> action)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
