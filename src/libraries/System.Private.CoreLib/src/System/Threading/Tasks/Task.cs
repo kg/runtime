@@ -1085,7 +1085,10 @@ namespace System.Threading.Tasks
                     // Also if we queued the task above, the task may not be done yet.
                     if (waitForCompletion && !IsCompleted)
                     {
-                        SpinThenBlockingWait(Timeout.Infinite, default);
+                        if (OperatingSystem.IsBrowser())
+                            throw new Exception("Cannot synchronously wait for tasks on this runtime and this task is incomplete.");
+                        else
+                            SpinThenBlockingWait(Timeout.Infinite, default);
                     }
                 }
                 catch (Exception e)
@@ -2911,7 +2914,10 @@ namespace System.Threading.Tasks
             }
             else
             {
-                returnValue = SpinThenBlockingWait(millisecondsTimeout, cancellationToken);
+                if (OperatingSystem.IsBrowser())
+                    throw new Exception("Cannot synchronously wait for tasks on this runtime.");
+                else
+                    returnValue = SpinThenBlockingWait(millisecondsTimeout, cancellationToken);
             }
 
             Debug.Assert(IsCompleted || millisecondsTimeout != Timeout.Infinite);
@@ -2959,6 +2965,7 @@ namespace System.Threading.Tasks
         /// <param name="millisecondsTimeout">The timeout.</param>
         /// <param name="cancellationToken">The token.</param>
         /// <returns>true if the task is completed; otherwise, false.</returns>
+        [System.Runtime.Versioning.UnsupportedOSPlatform("browser")]
         private bool SpinThenBlockingWait(int millisecondsTimeout, CancellationToken cancellationToken)
         {
             bool infiniteWait = millisecondsTimeout == Timeout.Infinite;
@@ -2970,7 +2977,6 @@ namespace System.Threading.Tasks
                 try
                 {
                     AddCompletionAction(mres, addBeforeOthers: true);
-#pragma warning disable CA1416 // Validate platform compatibility, issue: https://github.com/dotnet/runtime/issues/44622
                     if (infiniteWait)
                     {
                         bool notifyWhenUnblocked = ThreadPool.NotifyThreadBlocked();
@@ -3005,7 +3011,6 @@ namespace System.Threading.Tasks
                             }
                         }
                     }
-#pragma warning restore CA1416
                 }
                 finally
                 {
