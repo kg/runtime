@@ -90,7 +90,6 @@ export type MonoConfig = {
     coverage_profiler_options?: CoverageProfilerOptions, // dictionary-style Object. If omitted, coverage profiler will not be initialized.
     ignore_pdb_load_errors?: boolean,
     custom_marshalers?: { [key: string]: string | undefined },
-    record_task_results_for_automated_tests?: boolean,
 };
 
 export type MonoConfigError = {
