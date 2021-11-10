@@ -52,10 +52,20 @@ namespace System.Runtime.InteropServices.JavaScript
             internal IntPtr ptr;
 
             [FieldOffset(0)]
-            internal RuntimeMethodHandle handle;
+            internal RuntimeMethodHandle methodHandle;
 
             [FieldOffset(0)]
             internal RuntimeTypeHandle typeHandle;
+        }
+
+        private static RuntimeMethodHandle GetMethodHandleFromIntPtr (IntPtr ptr) {
+            var temp = new IntPtrAndHandle { ptr = ptr };
+            return temp.methodHandle;
+        }
+
+        private static RuntimeTypeHandle GetTypeHandleFromIntPtr (IntPtr ptr) {
+            var temp = new IntPtrAndHandle { ptr = ptr };
+            return temp.typeHandle;
         }
 
         // see src/mono/wasm/driver.c MARSHAL_TYPE_xxx
@@ -112,12 +122,11 @@ namespace System.Runtime.InteropServices.JavaScript
             if (methodPtr == IntPtr.Zero)
                 return null;
 
-            var tmp = new IntPtrAndHandle { ptr = methodPtr };
-            var methodHandle = tmp.handle;
+            var methodHandle = GetMethodHandleFromIntPtr(methodPtr);
 
             if (typePtr != IntPtr.Zero) {
-                tmp.ptr = typePtr;
-                return MethodBase.GetMethodFromHandle(methodHandle, tmp.typeHandle);
+                var typeHandle = GetTypeHandleFromIntPtr(typePtr);
+                return MethodBase.GetMethodFromHandle(methodHandle, typeHandle);
             } else {
                 return MethodBase.GetMethodFromHandle(methodHandle);
             }
@@ -155,7 +164,7 @@ namespace System.Runtime.InteropServices.JavaScript
 
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2070:UnrecognizedReflectionPattern",
             Justification = "Trimming doesn't affect types eligible for marshalling. Different exception for invalid inputs doesn't matter.")]
-        private static unsafe string GetAndEscapeStringProperty (Type type, string name) {
+        private static unsafe string GetAndEscapeJavascriptLiteralProperty (Type type, string name) {
             var info = type.GetProperty(
                 name, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic
             );
@@ -215,9 +224,7 @@ namespace System.Runtime.InteropServices.JavaScript
             parameterType = p[0].ParameterType;
             returnType = info.ReturnType;
 
-            var tmp = default(IntPtrAndHandle);
-            tmp.handle = info.MethodHandle;
-            return tmp.ptr;
+            return info.MethodHandle.Value;
         }
 
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2072:UnrecognizedReflectionPattern",
@@ -232,9 +239,7 @@ namespace System.Runtime.InteropServices.JavaScript
             if ((typePtr == IntPtr.Zero) || string.IsNullOrEmpty(marshalerFullName))
                 return "null";
 
-            IntPtrAndHandle tmp = default(IntPtrAndHandle);
-            tmp.ptr = typePtr;
-            var typeHandle = tmp.typeHandle;
+            var typeHandle = GetTypeHandleFromIntPtr(typePtr);
 
             var type = Type.GetTypeFromHandle(typeHandle);
             if (type is null)
@@ -243,8 +248,8 @@ namespace System.Runtime.InteropServices.JavaScript
             if (marshalerType is null)
                 return "null";
 
-            var jsToInterchange = GetAndEscapeStringProperty(marshalerType, "JavaScriptToInterchangeTransform");
-            var interchangeToJs = GetAndEscapeStringProperty(marshalerType, "InterchangeToJavaScriptTransform");
+            var jsToInterchange = GetAndEscapeJavascriptLiteralProperty(marshalerType, "JavaScriptToInterchangeTransform");
+            var interchangeToJs = GetAndEscapeJavascriptLiteralProperty(marshalerType, "InterchangeToJavaScriptTransform");
 
             var inputPtr = GetMarshalMethodPointer(marshalerType, "FromJavaScript", out Type fromReturnType, out Type fromParameterType);
             var outputPtr = GetMarshalMethodPointer(marshalerType, "ToJavaScript", out Type toReturnType, out Type toParameterType);
@@ -397,12 +402,11 @@ namespace System.Runtime.InteropServices.JavaScript
             }
         }
 
-        public static string GetCallSignature(IntPtr methodHandle, object? objForRuntimeType)
+        public static string GetCallSignature(IntPtr _methodHandle, object? objForRuntimeType)
         {
-            IntPtrAndHandle tmp = default(IntPtrAndHandle);
-            tmp.ptr = methodHandle;
+            var methodHandle = GetMethodHandleFromIntPtr(_methodHandle);
 
-            MethodBase? mb = objForRuntimeType is null ? MethodBase.GetMethodFromHandle(tmp.handle) : MethodBase.GetMethodFromHandle(tmp.handle, Type.GetTypeHandle(objForRuntimeType));
+            MethodBase? mb = objForRuntimeType is null ? MethodBase.GetMethodFromHandle(methodHandle) : MethodBase.GetMethodFromHandle(methodHandle, Type.GetTypeHandle(objForRuntimeType));
             if (mb is null)
                 return string.Empty;
 
