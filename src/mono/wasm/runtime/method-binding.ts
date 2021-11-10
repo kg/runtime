@@ -70,22 +70,13 @@ export function bind_runtime_method(method_name: string, signature: ArgsMarshalS
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function _create_named_function(name: string, argumentNames: string[], body: string, closure: any): Function {
-    let result = null;
-    let closureArgumentList: any[] | null = null;
     let closureArgumentNames = null;
 
-    if (closure) {
+    if (closure)
         closureArgumentNames = Object.keys(closure);
-        closureArgumentList = new Array(closureArgumentNames.length);
-        for (let i = 0, l = closureArgumentNames.length; i < l; i++)
-            closureArgumentList[i] = closure[closureArgumentNames[i]];
-    }
 
     const constructor = _create_rebindable_named_function(name, argumentNames, body, closureArgumentNames);
-    // eslint-disable-next-line prefer-spread
-    result = constructor.apply(null, closureArgumentList);
-
-    return result;
+    return constructor(closure);
 }
 
 export function _create_rebindable_named_function(name: string, argumentNames: string[], body: string, closureArgNames: string[] | null): Function {
@@ -101,8 +92,16 @@ export function _create_rebindable_named_function(name: string, argumentNames: s
 
     let rawFunctionText = "function " + escapedFunctionIdentifier + "(" +
         argumentNames.join(", ") +
-        ") {\r\n" +
-        body +
+        ") {\r\n";
+    
+    if (closureArgNames) {
+        for (let i = 0; i < closureArgNames.length; i++) {
+            const argName = closureArgNames[i];
+            rawFunctionText += `const ${argName} = __closure__.${argName};\r\n`;
+        }
+    }
+
+    rawFunctionText += body +
         "\r\n};\r\n";
 
     const lineBreakRE = /\r(\n?)/g;
@@ -112,16 +111,7 @@ export function _create_rebindable_named_function(name: string, argumentNames: s
         rawFunctionText.replace(lineBreakRE, "\r\n    ") +
         `    return ${escapedFunctionIdentifier};\r\n`;
 
-    let result = null, keys = null;
-
-    if (closureArgNames) {
-        keys = closureArgNames.concat([rawFunctionText]);
-    } else {
-        keys = [rawFunctionText];
-    }
-
-    result = Function.apply(Function, keys);
-    return result;
+    return new Function("__closure__", rawFunctionText);
 }
 
 export function _create_primitive_converters(): void {
