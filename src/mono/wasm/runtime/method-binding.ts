@@ -90,26 +90,33 @@ export function _create_rebindable_named_function(name: string, argumentNames: s
         escapedFunctionIdentifier = "unnamed";
     }
 
-    let rawFunctionText = "function " + escapedFunctionIdentifier + "(" +
-        argumentNames.join(", ") +
-        ") {\r\n";
-    
+    let closurePrefix = "";
     if (closureArgNames) {
         for (let i = 0; i < closureArgNames.length; i++) {
             const argName = closureArgNames[i];
-            rawFunctionText += `const ${argName} = __closure__.${argName};\r\n`;
+            closurePrefix += `const ${argName} = __closure__.${argName};\r\n`;
         }
+        closurePrefix += "\r\n";
     }
 
-    rawFunctionText += body +
-        "\r\n};\r\n";
+
+    let rawFunctionText = "function " + escapedFunctionIdentifier + "(" +
+        argumentNames.join(", ") +
+        ") {\r\n";
+
+    rawFunctionText += body + "\r\n";
 
     const lineBreakRE = /\r(\n?)/g;
 
     rawFunctionText =
-        uriPrefix + strictPrefix +
+        uriPrefix + strictPrefix + closurePrefix +
         rawFunctionText.replace(lineBreakRE, "\r\n    ") +
-        `    return ${escapedFunctionIdentifier};\r\n`;
+        `};\r\nreturn ${escapedFunctionIdentifier};\r\n`;
+
+    if (name) {
+        console.log(name);
+        console.log(rawFunctionText);
+    }
 
     return new Function("__closure__", rawFunctionText);
 }
