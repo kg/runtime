@@ -77,7 +77,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
                 "for (let i = 0; i < 3; i++) view[i] = value[i];" +
                 "return ptr;";
             public static string InterchangeToJavaScriptTransform => 
-                "return [ Module.HEAPF32[((value / 4) | 0) + 0], Module.HEAPF32[((value / 4) | 0) + 1], Module.HEAPF32[((value / 4) | 0) + 2] ]";
+                "return [ getF32(value + 0), getF32(value + 4), getF32(value + 8) ]";
 
             public static unsafe CustomVector3 FromJavaScript (float * p) {
                 return new CustomVector3 {

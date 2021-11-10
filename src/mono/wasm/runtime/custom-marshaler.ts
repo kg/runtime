@@ -12,7 +12,15 @@ import {
     get_method_signature_info 
 } from './method-binding';
 import { mono_method_get_call_signature } from './method-calls';
-import { temp_malloc, _create_temp_frame, _release_temp_frame } from './memory'
+import { 
+    temp_malloc, _create_temp_frame, _release_temp_frame,
+    getI8, getI16, getI32, getI64,
+    getU8, getU16, getU32,
+    getF32, getF64,
+    setI8, setI16, setI32, setI64,
+    setU8, setU16, setU32,
+    setF32, setF64,
+} from './memory'
 import { _unbox_ref_type_root_as_js_object } from './cs-to-js';
 import { js_to_mono_obj } from './js-to-cs';
 import cswraps from './corebindings';
@@ -54,7 +62,7 @@ function extract_js_obj_root_with_converter_impl (root : WasmRoot<MonoObject>, t
             // TODO: Verify the MarshalType return value?
             cwraps.mono_wasm_try_unbox_primitive_and_get_type(root.value, unbox_buffer, runtimeHelpers._unbox_buffer_size);
         }
-        const objectSize = Module.HEAP32[(<number><any>unbox_buffer + 4) / 4];
+        const objectSize = getI32(<number><any>unbox_buffer + 4);
         const pUnboxedData = <number><any>unbox_buffer + 8;
         _create_temp_frame();
         try {
@@ -106,11 +114,8 @@ export function box_js_obj_with_converter (js_obj : any, typePtr : MonoType) : M
     }
 }
 
-function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Function, js : string | undefined) : Function {
-    if (!js)
-        return boundConverter;
-    
-    let closure : any = { 
+function _create_interchange_closure (typePtr : MonoType) : any {
+    return { 
         // Put binding/mono API namespaces in the closure so that interchange filters can use them
         Module,
         MONO,
@@ -118,8 +123,22 @@ function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Functi
         // RuntimeTypeHandle for the type so that type-oriented APIs can be used easily
         typePtr,
         // Special interchange-only API for temporary allocations
-        alloca: temp_malloc
+        alloca: temp_malloc,
+        // Memory accessors
+        getI8, getI16, getI32, getI64,
+        getU8, getU16, getU32,
+        getF32, getF64,
+        setI8, setI16, setI32, setI64,
+        setU8, setU16, setU32,
+        setF32, setF64,
     };
+}
+
+function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Function, js : string | undefined) : Function {
+    if (!js)
+        return boundConverter;
+    
+    let closure = _create_interchange_closure(typePtr);
 
     let converterKey = boundConverter.name || "boundConverter";
     if (converterKey in closure)
@@ -236,16 +255,7 @@ function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Functi
     if (!js)
         return boundConverter;
     
-    let closure : any = { 
-        // Put binding/mono API namespaces in the closure so that interchange filters can use them
-        Module,
-        MONO,
-        BINDING,
-        // RuntimeTypeHandle for the type so that type-oriented APIs can be used easily
-        typePtr,
-        // Special interchange-only API for temporary allocations
-        alloca: temp_malloc
-    };
+    let closure = _create_interchange_closure(typePtr);
 
     let converterKey = boundConverter.name || "boundConverter";
     if (converterKey in closure)
