@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F323228E-200
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ref", "ref", "{B7387D02-A1E8-4ED1-833D-65D6112F00A0}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator", "gen\MarshalerGenerator\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj", "{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +55,10 @@ Global
 		{8061897F-550F-4932-8D35-126BE3CA894C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8061897F-550F-4932-8D35-126BE3CA894C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8061897F-550F-4932-8D35-126BE3CA894C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -65,6 +71,7 @@ Global
 		{133C6563-CA56-456A-9B63-CA5F3EA7E5CA} = {F323228E-200C-4069-98A1-E2400F3061B3}
 		{8061897F-550F-4932-8D35-126BE3CA894C} = {F323228E-200C-4069-98A1-E2400F3061B3}
 		{9B76030A-9DBD-401E-90B7-18111831B0D9} = {B7387D02-A1E8-4ED1-833D-65D6112F00A0}
+		{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324} = {F323228E-200C-4069-98A1-E2400F3061B3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {339DAF44-AC08-4D3B-BB34-6DA417E800E7}

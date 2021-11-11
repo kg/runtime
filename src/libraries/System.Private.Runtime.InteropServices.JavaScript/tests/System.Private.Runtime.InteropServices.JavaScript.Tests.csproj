@@ -3,9 +3,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFrameworks>$(NetCoreAppCurrent)-Browser</TargetFrameworks>
     <TestRuntime>true</TestRuntime>
-    <WasmXHarnessArgs>$(WasmXHarnessArgs) --engine-arg=--expose-gc --web-server-use-cop</WasmXHarnessArgs>
-    <ILLinkDescriptorsXml>ILLink.Descriptors.xml</ILLinkDescriptorsXml>
-    <ILLinkDescriptorsLibraryBuildXml>ILLink.Descriptors.xml</ILLinkDescriptorsLibraryBuildXml>
+    <WasmXHarnessArgs>$(WasmXHarnessArgs) --engine-arg=--expose-gc</WasmXHarnessArgs>
   </PropertyGroup>
   <ItemGroup>
     <WasmMarshaledType Include="System.Runtime.InteropServices.JavaScript.Tests.HelperMarshal+CustomClass"
@@ -38,5 +36,6 @@
   <ItemGroup>
     <!-- Part of the shared framework but not exposed. -->
     <ProjectReference Include="..\src\System.Private.Runtime.InteropServices.JavaScript.csproj" />
+    <ProjectReference Include="..\gen\MarshalerGenerator\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

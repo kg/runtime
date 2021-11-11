@@ -13,6 +13,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
 {
     public static class HelperMarshal
     {
+        [Marshaler(typeof(CustomClass))]
         public static class CustomClassMarshaler {
             public static CustomClass FromJavaScript (double d) {
                 return new CustomClass { D = d };
@@ -27,6 +28,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             public double D;
         }
 
+        [Marshaler(typeof(CustomStruct))]
         public static class CustomStructMarshaler {
             public static CustomStruct FromJavaScript (double d) {
                 return new CustomStruct { D = d };
@@ -41,6 +43,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             public double D;
         }
 
+        [Marshaler(typeof(CustomDate))]
         public static class CustomDateMarshaler {
             public static string JavaScriptToInterchangeTransform => "return value.toISOString()";
             public static string InterchangeToJavaScriptTransform => "return new Date(value)";
@@ -71,6 +74,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             }
         }
 
+        [Marshaler(typeof(CustomVector3))]
         public static unsafe class CustomVector3Marshaler {
             public static int ScratchBufferSize => sizeof(CustomVector3);
             public static string JavaScriptToInterchangeTransform =>

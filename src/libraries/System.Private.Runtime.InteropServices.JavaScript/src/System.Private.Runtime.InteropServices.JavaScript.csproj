@@ -38,6 +38,9 @@
     <Compile Include="System\Runtime\InteropServices\JavaScript\Types.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\gen\MarshalerGenerator\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="System.Runtime" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsBrowser)' == 'true'">
