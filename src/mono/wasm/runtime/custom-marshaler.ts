@@ -31,17 +31,6 @@ const _automatic_converter_table = new Map<MonoType, Function | null>();
 export const _custom_marshaler_name_table : { [key: string] : string } = {};
 const _temp_unbox_buffer_cache = new Map<MonoType, VoidPtr>();
 let _has_logged_custom_marshaler_table = false;
-let _is_unboxing_struct = false;
-
-function _resolve_class_ptr (ptr : any) : MonoClass {
-    if (typeof (ptr) !== "number")
-        throw new Error("Expected class pointer");
-
-    ptr = ptr | 0;
-    if (!ptr)
-        throw new Error("Expected class pointer");
-    return <MonoClass>ptr;
-}
 
 function extract_js_obj_root_with_converter_impl (root : WasmRoot<MonoObject>, typePtr : MonoType, unbox_buffer : VoidPtr, optional: boolean) {
     if (root.value === MonoObjectNull)
@@ -87,11 +76,11 @@ function extract_js_obj_root_with_converter_impl (root : WasmRoot<MonoObject>, t
         throw new Error (`No CustomJavaScriptMarshaler found for type ${_get_type_name(typePtr)}`);
 }
 
-export function extract_js_obj_root_with_converter (root : WasmRoot<MonoObject>, typePtr : MonoType, unbox_buffer : VoidPtr) {
+export function extract_js_obj_root_with_converter (root : WasmRoot<MonoObject>, typePtr : MonoType, unbox_buffer : VoidPtr) : any {
     return extract_js_obj_root_with_converter_impl(root, typePtr, unbox_buffer, false);
 }
 
-export function extract_js_obj_root_with_possible_converter (root : WasmRoot<MonoObject>, typePtr : MonoType, unbox_buffer : VoidPtr) {
+export function extract_js_obj_root_with_possible_converter (root : WasmRoot<MonoObject>, typePtr : MonoType, unbox_buffer : VoidPtr) : any {
     return extract_js_obj_root_with_converter_impl(root, typePtr, unbox_buffer, true);
 }
 
@@ -102,7 +91,7 @@ export function box_js_obj_with_converter (js_obj : any, typePtr : MonoType) : M
     if (!typePtr)
         throw new Error("No type pointer provided");
     
-    let converter = _pick_automatic_converter_for_user_type(MonoMethodNull, "a", typePtr);
+    const converter = _pick_automatic_converter_for_user_type(MonoMethodNull, "a", typePtr);
     if (!converter)
         throw new Error (`No CustomJavaScriptMarshaler found for type ${_get_type_name(typePtr)}`);
 
@@ -138,23 +127,23 @@ function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Functi
     if (!js)
         return boundConverter;
     
-    let closure = _create_interchange_closure(typePtr);
+    const closure = _create_interchange_closure(typePtr);
 
     let converterKey = boundConverter.name || "boundConverter";
     if (converterKey in closure)
         converterKey += "_";
     closure[converterKey] = boundConverter;
 
-    let filterExpression = _create_named_function(
+    const filterExpression = _create_named_function(
         "interchange_to_js_filter_for_type" + typePtr,
         ["value"], js, closure
     );
     closure.filter = filterExpression;
     
-    let bodyJs = `let value = ${converterKey}(js_value), filteredValue = filter(value);\r\n` +
+    const bodyJs = `let value = ${converterKey}(js_value), filteredValue = filter(value);\r\n` +
         "return filteredValue;";
-    let functionName = "interchange_to_js_for_type" + typePtr;
-    let result = _create_named_function(
+    const functionName = "interchange_to_js_for_type" + typePtr;
+    const result = _create_named_function(
         functionName, ["js_value"], bodyJs, closure
     );
 
@@ -169,15 +158,15 @@ function _get_custom_marshaler_info_for_type (typePtr : MonoType) {
     
     let result;
     if (!_custom_marshaler_info_cache.has (typePtr)) {
-        let aqn = _get_type_aqn (typePtr);
+        const aqn = _get_type_aqn (typePtr);
         if (!aqn.startsWith("System.Object, System.Private.CoreLib, ")) {
             let marshalerAQN = _custom_marshaler_name_table[aqn];
             if (!marshalerAQN) {
-                for (let k in _custom_marshaler_name_table) {
+                for (const k in _custom_marshaler_name_table) {
                     // Perform a loose match against the assembly-qualified type names,
                     //  because in some cases it is not possible or convenient to
                     //  include the full string (i.e. version, culture, etc)
-                    let isMatch = k.startsWith(aqn) || aqn.startsWith(k);
+                    const isMatch = k.startsWith(aqn) || aqn.startsWith(k);
                     if (isMatch) {
                         marshalerAQN = _custom_marshaler_name_table[k];
                         break;
@@ -189,13 +178,13 @@ function _get_custom_marshaler_info_for_type (typePtr : MonoType) {
                 if (!_has_logged_custom_marshaler_table) {
                     _has_logged_custom_marshaler_table = true;
                     console.log(`WARNING: Type '${aqn}' has no registered custom marshaler. A dump of the marshaler table follows:`);
-                    for (let k in _custom_marshaler_name_table)
+                    for (const k in _custom_marshaler_name_table)
                         console.log(`  ${k}: ${_custom_marshaler_name_table[k]}`);
                 }
                 _custom_marshaler_info_cache.set(typePtr, null);
                 return null;
             }
-            let json = cswraps.get_custom_marshaler_info (typePtr, marshalerAQN);
+            const json = cswraps.get_custom_marshaler_info (typePtr, marshalerAQN);
             result = <CustomMarshalerInfo>JSON.parse(json);
             if (!result)
                 throw new Error (`Configured custom marshaler for ${aqn} could not be loaded: ${marshalerAQN}`);
@@ -216,7 +205,7 @@ function _get_struct_unboxer_for_type (typePtr : MonoType) {
         throw new Error("no type");
 
     if (!_struct_unboxer_cache.has (typePtr)) {
-        let info = _get_custom_marshaler_info_for_type (typePtr);
+        const info = _get_custom_marshaler_info_for_type (typePtr);
         if (!info) {
             _struct_unboxer_cache.set (typePtr, null);
             return null;
@@ -225,22 +214,22 @@ function _get_struct_unboxer_for_type (typePtr : MonoType) {
         if (info.error)
             console.error(`Error while configuring automatic converter for type ${_get_type_name(typePtr)}: ${info.error}`);
 
-        let interchangeToJs = info.interchangeToJs;
+        const interchangeToJs = info.interchangeToJs;
 
-        let convMethod = info.outputPtr;
+        const convMethod = info.outputPtr;
         if (!convMethod) {
             if (info.typePtr)
                 console.error(`Automatic converter for type ${_get_type_name(typePtr)} has no suitable ToJavaScript method`);
             // We explicitly store null in the cache so that lookups are not performed again for this type
             _struct_unboxer_cache.set (typePtr, null);
         } else {
-            let typeName = _get_type_name(typePtr);
-            let boundConverter = mono_bind_method (
+            const typeName = _get_type_name(typePtr);
+            const boundConverter = mono_bind_method (
                 convMethod, null, "m", typeName + "$ToJavaScript"
             );
 
-            let wrapped = function () {
-                let result = boundConverter.apply(null, arguments);
+            const wrapped = function () {
+                const result = boundConverter.apply(null, arguments);
                 return result;
             };
 
@@ -255,26 +244,26 @@ function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Functi
     if (!js)
         return boundConverter;
     
-    let closure = _create_interchange_closure(typePtr);
+    const closure = _create_interchange_closure(typePtr);
 
     let converterKey = boundConverter.name || "boundConverter";
     if (converterKey in closure)
         converterKey += "_";
     closure[converterKey] = boundConverter;
 
-    let filterExpression = _create_named_function(
+    const filterExpression = _create_named_function(
         "interchange_filter_for_type" + typePtr,
         ["value"], js, closure
     );
 
     closure.filter = filterExpression;
-    let functionName = "js_to_interchange_for_type" + typePtr;
+    const functionName = "js_to_interchange_for_type" + typePtr;
 
-    let bodyJs = "let filteredValue = filter(value);\r\n" +
+    const bodyJs = "let filteredValue = filter(value);\r\n" +
         `let convertedResult = ${converterKey}(filteredValue, method, parmIdx);\r\n` +
         "return convertedResult;";
     
-    let result = _create_named_function(
+    const result = _create_named_function(
         functionName, 
         ["value", "method", "parmIdx"], bodyJs, closure
     );
@@ -294,9 +283,9 @@ function _pick_automatic_converter_for_user_type (methodPtr : MonoMethod, args_m
         if (info.error)
             console.error(`Error while configuring automatic converter for type ${_get_type_name(typePtr)}: ${info.error}`);
 
-        let jsToInterchange = info.jsToInterchange;
+        const jsToInterchange = info.jsToInterchange;
 
-        let convMethod = info.inputPtr;
+        const convMethod = info.inputPtr;
         if (!convMethod) {
             if (info.typePtr)
                 console.error(`Automatic converter for type ${_get_type_name(typePtr)} has no suitable FromJavaScript method`);
@@ -305,17 +294,17 @@ function _pick_automatic_converter_for_user_type (methodPtr : MonoMethod, args_m
         }
 
         // FIXME
-        let sigInfo = get_method_signature_info (MonoTypeNull, convMethod);
+        const sigInfo = get_method_signature_info (MonoTypeNull, convMethod);
         if (sigInfo.parameters.length < 1)
             throw new Error("Expected at least one parameter");
         // Return unboxed so it can go directly into the arguments list
-        let signature = sigInfo.parameters[0].signatureChar + "!";
-        let methodName = _get_type_name(typePtr) + "$FromJavaScript";
-        let boundConverter = mono_bind_method (
+        const signature = sigInfo.parameters[0].signatureChar + "!";
+        const methodName = _get_type_name(typePtr) + "$FromJavaScript";
+        const boundConverter = mono_bind_method (
             convMethod, null, <ArgsMarshalString>signature, methodName
         );
 
-        let result = _compile_js_to_interchange (typePtr, boundConverter, jsToInterchange);
+        const result = _compile_js_to_interchange (typePtr, boundConverter, jsToInterchange);
 
         _automatic_converter_table.set (typePtr, result);
     }
@@ -323,34 +312,29 @@ function _pick_automatic_converter_for_user_type (methodPtr : MonoMethod, args_m
     return _automatic_converter_table.get(typePtr) || null;
 }
 
-export function _pick_automatic_converter (methodPtr : MonoMethod, args_marshal : ArgsMarshalString, paramRecord : MarshalTypeRecord) {
-    let result : Converter = {
+export function _pick_automatic_converter (methodPtr : MonoMethod, args_marshal : ArgsMarshalString, paramRecord : MarshalTypeRecord) : Converter {
+    const result : Converter = {
         steps: [],
         size: 0,
         needs_unbox: false,
         needs_root: true,
-        key: 'a',
+        key: "a",
         convert: null
     };
 
-    switch (paramRecord.marshalType) {
-        case MarshalType.VT: // Struct
-            result.needs_unbox = true;
-            ; // FIXME: Fall-through
-        case MarshalType.OBJECT: // OBJECT
-            let res = _pick_automatic_converter_for_user_type (methodPtr, args_marshal, paramRecord.typePtr);
-            if (res) {
-                result.convert = res;
-                break;
-            } else if (result.needs_unbox) {
-                throw new Error(`found no automatic converter for type ${_get_type_name(paramRecord.typePtr)}`);
-            }
-            ; // FIXME: Fall-through
-        default:
-            // FIXME
-            result.convert = js_to_mono_obj;
-            break;
+    if (paramRecord.marshalType === MarshalType.VT)
+        result.needs_unbox = true;
+
+    if ((paramRecord.marshalType === MarshalType.VT) || (paramRecord.marshalType === MarshalType.OBJECT)) {
+        const res = _pick_automatic_converter_for_user_type (methodPtr, args_marshal, paramRecord.typePtr);
+        if (res) {
+            result.convert = res;
+            return result;
+        }
+        if (result.needs_unbox)
+            throw new Error(`found no automatic converter for type ${_get_type_name(paramRecord.typePtr)}`);
     }
 
+    result.convert = js_to_mono_obj;
     return result;
 }

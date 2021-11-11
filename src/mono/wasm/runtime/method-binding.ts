@@ -141,10 +141,10 @@ export function get_method_signature_info (typePtr : MonoType, methodPtr : MonoM
         throw new Error("Method ptr not provided");
         
     let result = _method_signature_info_table.get(methodPtr);
-    let classMismatch = !!result && (result.typePtr !== typePtr);
+    const classMismatch = !!result && (result.typePtr !== typePtr);
     if (!result) {
-        let typeName = _get_type_name(typePtr);
-        let json = cswraps.make_marshal_signature_info(typePtr, methodPtr);
+        const typeName = _get_type_name(typePtr);
+        const json = cswraps.make_marshal_signature_info(typePtr, methodPtr);
         if (!json)
             throw new Error(`MakeMarshalSignatureInfo failed for type ${typeName}`);
 
@@ -180,7 +180,7 @@ function _create_converter_for_marshal_string(typePtr: MonoType, method: MonoMet
             if (!sigInfo)
                 throw new Error(`Failed to get signature info for method ${method}`);
             depends_on_method_arguments = true;
-            let step = _pick_automatic_converter(method, args_marshal, sigInfo.parameters[i]);
+            const step = _pick_automatic_converter(method, args_marshal, sigInfo.parameters[i]);
             if (!step)
                 throw new Error(`Failed to select an automatic converter for parameter #${i} of method ${method}`);
             steps.push(step);
@@ -435,20 +435,20 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
     // We implement a simple lookup cache here to prevent repeated bind_method calls on the same target
     //  from exhausting the set of available scratch roots. This is mostly useful for automated tests,
     //  but it may also save some naive callers from rare runtime failures
-    let cacheKey = `m${method}_a${args_marshal}`;
+    const cacheKey = `m${method}_a${args_marshal}`;
     if (!this_arg) {
         if (_bound_method_cache.has(cacheKey)) {
-            let cacheHit = _bound_method_cache.get(cacheKey);
+            const cacheHit = _bound_method_cache.get(cacheKey);
             return <Function>cacheHit;
         }
     }
 
     let converter: Converter | null = null;
     if (typeof (args_marshal) === "string") {
-        let classPtr = cwraps.mono_wasm_get_class_for_bind_or_invoke(this_arg, method);
+        const classPtr = cwraps.mono_wasm_get_class_for_bind_or_invoke(this_arg, method);
         if (!classPtr)
             throw new Error(`Could not get class ptr for bind_method with this (${this_arg}) and method (${method})`);
-        let typePtr = cwraps.mono_wasm_class_get_type(classPtr);
+        const typePtr = cwraps.mono_wasm_class_get_type(classPtr);
         converter = _compile_converter_for_marshal_string(typePtr, method, args_marshal);
     }
 
@@ -513,7 +513,7 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
         );
 
         for (let i = 0; i < converter.steps.length; i++) {
-            let argName = "arg" + i;
+            const argName = "arg" + i;
             argumentNames.push(argName);
             body.push(
                 "    " + argName +
@@ -595,7 +595,7 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
     }
 
     if (friendly_name) {
-        const escapeRE = /[^A-Za-z0-9_\$]/g;
+        const escapeRE = /[^A-Za-z0-9_$]/g;
         friendly_name = friendly_name.replace(escapeRE, "_");
     }
 
@@ -609,9 +609,8 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
         "return result;"
     );
 
-    let bodyJs = body.join("\r\n");
-
-    let result = _create_named_function(displayName, argumentNames, bodyJs, closure);
+    const bodyJs = body.join("\r\n");
+    const result = _create_named_function(displayName, argumentNames, bodyJs, closure);
 
     // HACK: If the bound method has a this-arg, we don't want to store it into the cache
     //  since this indicates that the caller may be binding lots of methods onto instances
