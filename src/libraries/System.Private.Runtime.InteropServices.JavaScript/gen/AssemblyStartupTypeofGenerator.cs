@@ -6,7 +6,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator
+namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
 {
     [Generator]
     internal class AssemblyStartupTypeofGenerator : IIncrementalGenerator
@@ -55,10 +55,10 @@ namespace System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator
 
         private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> types, SourceProductionContext context)
         {
-            if (types.IsDefaultOrEmpty)
-                return;
+            //if (types.IsDefaultOrEmpty)
+            //    return;
 
-            // TODO...
+            context.AddSource("Marshaler.g.cs", "class MarshalerInitializer { [System.Runtime.CompilerServices.ModuleInitializer] internal static void Initialize() { /* Magic... */ } }");
         }
     }
 }

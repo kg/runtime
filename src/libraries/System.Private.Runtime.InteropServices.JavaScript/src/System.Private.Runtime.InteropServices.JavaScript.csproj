@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
@@ -31,12 +31,13 @@
     <Compile Include="System\Runtime\InteropServices\JavaScript\HostObject.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\Function.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\JSObject.References.cs" />
+    <Compile Include="System\Runtime\InteropServices\JavaScript\MarshalerAttribute.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\DateTimeMarshaler.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\DateTimeOffsetMarshaler.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\UriMarshaler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MarshalerAttribute.cs" />
+    <ProjectReference Include="..\gen\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Runtime" />
