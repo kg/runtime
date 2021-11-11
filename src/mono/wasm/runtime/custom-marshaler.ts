@@ -1,17 +1,16 @@
-import { Module, MONO, BINDING, runtimeHelpers } from './modules'
-import cwraps from './cwraps'
-import { mono_wasm_new_root, WasmRoot } from './roots';
+import { Module, MONO, BINDING, runtimeHelpers } from "./modules";
+import cwraps from "./cwraps";
+import { WasmRoot } from "./roots";
 import { 
-    MonoMethod, MonoObject, MonoClass, MonoObjectNull, 
-    MonoMethodNull, MonoClassNull, MonoType, MonoTypeNull,
+    MonoMethod, MonoObject, MonoObjectNull, 
+    MonoMethodNull, MonoType, MonoTypeNull,
     MarshalType, MarshalTypeRecord, CustomMarshalerInfo
-} from './types';
+} from "./types";
 import { 
     ArgsMarshalString, mono_bind_method, _create_named_function, 
-    Converter, _get_class_name, _get_type_aqn, _get_type_name, 
+    Converter, _get_type_aqn, _get_type_name, 
     get_method_signature_info 
-} from './method-binding';
-import { mono_method_get_call_signature } from './method-calls';
+} from "./method-binding";
 import { 
     temp_malloc, _create_temp_frame, _release_temp_frame,
     getI8, getI16, getI32, getI64,
@@ -20,10 +19,10 @@ import {
     setI8, setI16, setI32, setI64,
     setU8, setU16, setU32,
     setF32, setF64,
-} from './memory'
-import { _unbox_ref_type_root_as_js_object } from './cs-to-js';
-import { js_to_mono_obj } from './js-to-cs';
-import cswraps from './corebindings';
+} from "./memory";
+import { _unbox_ref_type_root_as_js_object } from "./cs-to-js";
+import { js_to_mono_obj } from "./js-to-cs";
+import cswraps from "./corebindings";
 
 const _custom_marshaler_info_cache = new Map<MonoType, CustomMarshalerInfo | null>();
 const _struct_unboxer_cache = new Map<MonoType, Function | null>();
@@ -177,7 +176,7 @@ function _get_custom_marshaler_info_for_type (typePtr : MonoType) {
             if (!marshalerAQN) {
                 if (!_has_logged_custom_marshaler_table) {
                     _has_logged_custom_marshaler_table = true;
-                    console.log(`WARNING: Type '${aqn}' has no registered custom marshaler. A dump of the marshaler table follows:`);
+                    console.log(`WARNING: Type "${aqn}" has no registered custom marshaler. A dump of the marshaler table follows:`);
                     for (const k in _custom_marshaler_name_table)
                         console.log(`  ${k}: ${_custom_marshaler_name_table[k]}`);
                 }

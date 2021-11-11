@@ -3,11 +3,11 @@
 
 import { mono_wasm_new_root, WasmRoot } from "./roots";
 import {
-    GCHandle, Int32Ptr, JSHandle, JSHandleDisposed, MonoArray,
-    MonoArrayNull, MonoObject, MonoObjectNull, MonoString, MonoClass,
-    MonoClassNull, MonoType, MonoTypeNull, MarshalType, MarshalError
+    GCHandle, Int32Ptr, JSHandleDisposed, MonoArray,
+    MonoArrayNull, MonoObject, MonoObjectNull, MonoString,
+    MonoType, MonoTypeNull, MarshalType, MarshalError
 } from "./types";
-import { Module, runtimeHelpers } from "./modules";
+import { runtimeHelpers } from "./modules";
 import { conv_string } from "./strings";
 import corebindings from "./corebindings";
 import cwraps from "./cwraps";
