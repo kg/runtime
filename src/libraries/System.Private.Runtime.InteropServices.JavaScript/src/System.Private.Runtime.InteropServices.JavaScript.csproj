@@ -36,6 +36,9 @@
     <Compile Include="System\Runtime\InteropServices\JavaScript\UriMarshaler.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MarshalerAttribute.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="System.Runtime" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsBrowser)' == 'true'">
