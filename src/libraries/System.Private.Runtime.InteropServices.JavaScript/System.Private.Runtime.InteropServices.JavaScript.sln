@@ -19,7 +19,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F323228E-200
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ref", "ref", "{B7387D02-A1E8-4ED1-833D-65D6112F00A0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator", "gen\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj", "{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator", "gen\MarshalerGenerator\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj", "{F4AEA2CF-59E2-424A-BBDE-7C9E57DC6324}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

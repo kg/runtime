@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
@@ -37,7 +37,7 @@
     <Compile Include="System\Runtime\InteropServices\JavaScript\UriMarshaler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\gen\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\gen\MarshalerGenerator\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Runtime" />
