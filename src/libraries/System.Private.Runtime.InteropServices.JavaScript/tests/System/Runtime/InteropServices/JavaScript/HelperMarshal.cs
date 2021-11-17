@@ -47,7 +47,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
 
             public static CustomDate FromJavaScript (string s) {
                 var newDate = DateTime.Parse(s).ToUniversalTime();
-                return new CustomDate { 
+                return new CustomDate {
                     Date = newDate
                 };
             }
@@ -75,7 +75,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             public static string JavaScriptToInterchangeTransform => "let ptr = alloca(4 * 3), view = new Float32Array(Module.HEAPU8.buffer, ptr, 3); " +
                 "for (let i = 0; i < 3; i++) view[i] = value[i];" +
                 "return ptr;";
-            public static string InterchangeToJavaScriptTransform => 
+            public static string InterchangeToJavaScriptTransform =>
                 "return [ getF32(value + 0), getF32(value + 4), getF32(value + 8) ]";
 
             public static unsafe CustomVector3 FromJavaScript (float * p) {
@@ -782,65 +782,65 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             };
         }
 
-        public static Task SynchronousTask() 
+        public static Task SynchronousTask()
         {
             return Task.CompletedTask;
         }
 
-        public static async Task AsynchronousTask() 
+        public static async Task AsynchronousTask()
         {
             await Task.Yield();
         }
 
-        public static Task<int> SynchronousTaskInt(int i) 
+        public static Task<int> SynchronousTaskInt(int i)
         {
             return Task.FromResult(i);
         }
 
-        public static async Task<int> AsynchronousTaskInt(int i) 
+        public static async Task<int> AsynchronousTaskInt(int i)
         {
             await Task.Yield();
             return i;
         }
 
-        public static Task FailedSynchronousTask() 
+        public static Task FailedSynchronousTask()
         {
             return Task.FromException(new Exception());
         }
 
-        public static async Task FailedAsynchronousTask() 
+        public static async Task FailedAsynchronousTask()
         {
             await Task.Yield();
             throw new Exception();
         }
 
-        public static async ValueTask AsynchronousValueTask() 
+        public static async ValueTask AsynchronousValueTask()
         {
             await Task.Yield();
         }
 
-        public static ValueTask SynchronousValueTask() 
+        public static ValueTask SynchronousValueTask()
         {
             return ValueTask.CompletedTask;
         }
 
-        public static ValueTask<int> SynchronousValueTaskInt(int i) 
+        public static ValueTask<int> SynchronousValueTaskInt(int i)
         {
             return ValueTask.FromResult(i);
         }
 
-        public static async ValueTask<int> AsynchronousValueTaskInt(int i) 
+        public static async ValueTask<int> AsynchronousValueTaskInt(int i)
         {
             await Task.Yield();
             return i;
         }
 
-        public static ValueTask FailedSynchronousValueTask() 
+        public static ValueTask FailedSynchronousValueTask()
         {
             return ValueTask.FromException(new Exception());
         }
 
-        public static async ValueTask FailedAsynchronousValueTask() 
+        public static async ValueTask FailedAsynchronousValueTask()
         {
             await Task.Yield();
             throw new Exception();
