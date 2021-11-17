@@ -2,21 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 import { WasmRoot, WasmRootBuffer, mono_wasm_new_root } from "./roots";
-import { 
-    MonoClass, MonoMethod, MonoObject, coerceNull, 
+import {
+    MonoClass, MonoMethod, MonoObject, coerceNull,
     VoidPtrNull, VoidPtr, MonoType, MarshalSignatureInfo, MarshalType
 } from "./types";
 import { BINDING, runtimeHelpers } from "./modules";
 import { js_to_mono_enum, _js_to_mono_obj, _js_to_mono_uri } from "./js-to-cs";
 import { js_string_to_mono_string, js_string_to_mono_string_interned } from "./strings";
-import { 
-    _create_temp_frame, 
-    getI32, getU32, getF32, getF64, 
+import {
+    _create_temp_frame,
+    getI32, getU32, getF32, getF64,
     setI32, setU32, setF32, setF64, setI64,
 } from "./memory";
 import { _unbox_mono_obj_root_with_known_nonprimitive_type } from "./cs-to-js";
 import { _pick_automatic_converter } from "./custom-marshaler";
-import { 
+import {
     _get_args_root_buffer_for_method_call, _get_buffer_for_method_call,
     _handle_exception_for_call, _teardown_after_call
 } from "./method-calls";
@@ -121,7 +121,7 @@ export function _create_primitive_converters(): void {
     result.set("m", { steps: [{}], size: 0 });
     result.set("s", { steps: [{ convert: js_string_to_mono_string.bind(BINDING) }], size: 0, needs_root: true });
     result.set("S", { steps: [{ convert: js_string_to_mono_string_interned.bind(BINDING) }], size: 0, needs_root: true });
-    // note we also bind first argument to false for both _js_to_mono_obj and _js_to_mono_uri, 
+    // note we also bind first argument to false for both _js_to_mono_obj and _js_to_mono_uri,
     // because we will root the reference, so we don't need in-flight reference
     // also as those are callback arguments and we don't have platform code which would release the in-flight reference on C# end
     result.set("o", { steps: [{ convert: _js_to_mono_obj.bind(BINDING, false) }], size: 0, needs_root: true });
@@ -139,7 +139,7 @@ export function _create_primitive_converters(): void {
 export function get_method_signature_info (typePtr : MonoType, methodPtr : MonoMethod) : MarshalSignatureInfo {
     if (!methodPtr)
         throw new Error("Method ptr not provided");
-        
+
     let result = _method_signature_info_table.get(methodPtr);
     const classMismatch = !!result && (result.typePtr !== typePtr);
     if (!result) {
@@ -188,7 +188,7 @@ function _create_converter_for_marshal_string(typePtr: MonoType, method: MonoMet
             size += step.size;
             continue;
         }
-        
+
         if (i === args_marshal.length - 1) {
             if (key === "!") {
                 is_result_definitely_unmarshaled = true;
@@ -559,10 +559,10 @@ export function mono_bind_method(method: MonoMethod, this_arg: MonoObject | null
     if (converter) {
         if (converter.is_result_possibly_unmarshaled)
             body.push("if (!is_result_marshaled) ");
-        
+
         if (converter.is_result_definitely_unmarshaled || converter.is_result_possibly_unmarshaled)
             body.push("    result = resultPtr;");
-        
+
         if (!converter.is_result_definitely_unmarshaled)
             body.push(
                 "if (is_result_marshaled && (resultPtr !== 0)) {",
@@ -639,7 +639,7 @@ type _ExtraArgsMarshalOperators = "!" | "";
 
 // TODO make this more efficient so we can add more parameters (currently it only checks up to 4). One option is to add a
 // blank to the ArgsMarshal enum but that doesn't solve the TS limit of number of options in 1 type
-// Take the marshaling enums and convert to all the valid strings for type checking. 
+// Take the marshaling enums and convert to all the valid strings for type checking.
 export type ArgsMarshalString = ""
     | `${ArgsMarshal}${_ExtraArgsMarshalOperators}`
     | `${ArgsMarshal}${ArgsMarshal}${_ExtraArgsMarshalOperators}`

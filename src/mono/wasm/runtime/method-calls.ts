@@ -180,7 +180,7 @@ export function call_method(method: MonoMethod, this_arg: MonoObject | undefined
 
 export function _handle_exception_for_call(
     converter: Converter | undefined, token: BoundMethodToken | null,
-    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>, 
+    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>,
     exceptionRoot: WasmRoot<MonoObject>, argsRootBuffer?: WasmRootBuffer
 ): void {
     const exc = _convert_exception_for_method_call(resultRoot.value, exceptionRoot.value);
@@ -193,8 +193,8 @@ export function _handle_exception_for_call(
 
 function _handle_exception_and_produce_result_for_call(
     converter: Converter | undefined, token: BoundMethodToken | null,
-    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>, 
-    exceptionRoot: WasmRoot<MonoObject>, argsRootBuffer: WasmRootBuffer | undefined, 
+    buffer: VoidPtr, resultRoot: WasmRoot<MonoString>,
+    exceptionRoot: WasmRoot<MonoObject>, argsRootBuffer: WasmRootBuffer | undefined,
     is_result_marshaled: boolean
 ): any {
     _handle_exception_for_call(converter, token, buffer, resultRoot, exceptionRoot, argsRootBuffer);
@@ -210,7 +210,7 @@ function _handle_exception_and_produce_result_for_call(
 
 export function _teardown_after_call(
     converter: Converter | undefined, token: BoundMethodToken | null,
-    buffer: VoidPtr, resultRoot: WasmRoot<any>, 
+    buffer: VoidPtr, resultRoot: WasmRoot<any>,
     exceptionRoot: WasmRoot<any>, argsRootBuffer?: WasmRootBuffer
 ): void {
     _release_temp_frame();

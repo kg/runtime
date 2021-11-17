@@ -1,17 +1,17 @@
 import { Module, MONO, BINDING, runtimeHelpers } from "./modules";
 import cwraps from "./cwraps";
 import { WasmRoot } from "./roots";
-import { 
-    MonoMethod, MonoObject, MonoObjectNull, 
+import {
+    MonoMethod, MonoObject, MonoObjectNull,
     MonoMethodNull, MonoType, MonoTypeNull,
     MarshalType, MarshalTypeRecord, CustomMarshalerInfo
 } from "./types";
-import { 
-    ArgsMarshalString, mono_bind_method, _create_named_function, 
-    Converter, _get_type_aqn, _get_type_name, 
-    get_method_signature_info 
+import {
+    ArgsMarshalString, mono_bind_method, _create_named_function,
+    Converter, _get_type_aqn, _get_type_name,
+    get_method_signature_info
 } from "./method-binding";
-import { 
+import {
     temp_malloc, _create_temp_frame, _release_temp_frame,
     getI8, getI16, getI32, getI64,
     getU8, getU16, getU32,
@@ -89,7 +89,7 @@ export function box_js_obj_with_converter (js_obj : any, typePtr : MonoType) : M
 
     if (!typePtr)
         throw new Error("No type pointer provided");
-    
+
     const converter = _pick_automatic_converter_for_user_type(MonoMethodNull, "a", typePtr);
     if (!converter)
         throw new Error (`No CustomJavaScriptMarshaler found for type ${_get_type_name(typePtr)}`);
@@ -103,7 +103,7 @@ export function box_js_obj_with_converter (js_obj : any, typePtr : MonoType) : M
 }
 
 function _create_interchange_closure (typePtr : MonoType) : any {
-    return { 
+    return {
         // Put binding/mono API namespaces in the closure so that interchange filters can use them
         Module,
         MONO,
@@ -125,7 +125,7 @@ function _create_interchange_closure (typePtr : MonoType) : any {
 function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Function, js : string | undefined) : Function {
     if (!js)
         return boundConverter;
-    
+
     const closure = _create_interchange_closure(typePtr);
 
     let converterKey = boundConverter.name || "boundConverter";
@@ -138,7 +138,7 @@ function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Functi
         ["value"], js, closure
     );
     closure.filter = filterExpression;
-    
+
     const bodyJs = `let value = ${converterKey}(js_value), filteredValue = filter(value);\r\n` +
         "return filteredValue;";
     const functionName = "interchange_to_js_for_type" + typePtr;
@@ -154,7 +154,7 @@ function _get_custom_marshaler_info_for_type (typePtr : MonoType) {
         return null;
     if (!_custom_marshaler_name_table)
         return null;
-    
+
     let result;
     if (!_custom_marshaler_info_cache.has (typePtr)) {
         const aqn = _get_type_aqn (typePtr);
@@ -242,7 +242,7 @@ function _get_struct_unboxer_for_type (typePtr : MonoType) {
 function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Function, js : string | undefined) : Function {
     if (!js)
         return boundConverter;
-    
+
     const closure = _create_interchange_closure(typePtr);
 
     let converterKey = boundConverter.name || "boundConverter";
@@ -261,9 +261,9 @@ function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Functi
     const bodyJs = "let filteredValue = filter(value);\r\n" +
         `let convertedResult = ${converterKey}(filteredValue, method, parmIdx);\r\n` +
         "return convertedResult;";
-    
+
     const result = _create_named_function(
-        functionName, 
+        functionName,
         ["value", "method", "parmIdx"], bodyJs, closure
     );
 
