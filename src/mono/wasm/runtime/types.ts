@@ -224,7 +224,8 @@ export enum MarshalType {
     STRING_INTERNED = 29,
     VOID = 30,
     ENUM64 = 31,
-    POINTER = 32
+    POINTER = 32,
+    SPAN_BYTE = 33,
 }
 
 // see src/mono/wasm/driver.c MARSHAL_ERROR_xxx and Runtime.cs
@@ -255,4 +256,5 @@ export type CustomMarshalerInfo = {
     inputPtr? : MonoMethod;
     outputPtr? : MonoMethod;
     error? : string;
+    scratchBufferSize? : number;
 }

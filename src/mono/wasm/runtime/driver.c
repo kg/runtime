@@ -90,6 +90,10 @@ char *mono_method_get_full_name (MonoMethod *method);
 #define MARSHAL_TYPE_VOID 30
 #define MARSHAL_TYPE_POINTER 32
 
+// Used for passing spans to C# from the JS bindings. Since spans have type restrictions,
+//  no boxed value will ever have this type and driver.c does not ever produce it
+#define MARSHAL_TYPE_SPAN_BYTE 33
+
 // errors
 #define MARSHAL_ERROR_BUFFER_TOO_SMALL 512
 #define MARSHAL_ERROR_NULL_CLASS_POINTER 513

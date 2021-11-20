@@ -118,22 +118,24 @@ export function _create_rebindable_named_function(name: string, argumentNames: s
 
 export function _create_primitive_converters(): void {
     const result = primitiveConverters;
-    result.set("m", { steps: [{}], size: 0 });
-    result.set("s", { steps: [{ convert: js_string_to_mono_string.bind(BINDING) }], size: 0, needs_root: true });
-    result.set("S", { steps: [{ convert: js_string_to_mono_string_interned.bind(BINDING) }], size: 0, needs_root: true });
+    result.set(ArgsMarshal.MONOObj, { steps: [{}], size: 0 });
+    result.set(ArgsMarshal.String, { steps: [{ convert: js_string_to_mono_string.bind(BINDING) }], size: 0, needs_root: true });
+    result.set(ArgsMarshal.InternedString, { steps: [{ convert: js_string_to_mono_string_interned.bind(BINDING) }], size: 0, needs_root: true });
     // note we also bind first argument to false for both _js_to_mono_obj and _js_to_mono_uri,
     // because we will root the reference, so we don't need in-flight reference
     // also as those are callback arguments and we don't have platform code which would release the in-flight reference on C# end
-    result.set("o", { steps: [{ convert: _js_to_mono_obj.bind(BINDING, false) }], size: 0, needs_root: true });
-    result.set("u", { steps: [{ convert: _js_to_mono_uri.bind(BINDING, false) }], size: 0, needs_root: true });
+    result.set(ArgsMarshal.JSObj, { steps: [{ convert: _js_to_mono_obj.bind(BINDING, false) }], size: 0, needs_root: true });
+    result.set(ArgsMarshal.Uri, { steps: [{ convert: _js_to_mono_uri.bind(BINDING, false) }], size: 0, needs_root: true });
 
     // result.set ('k', { steps: [{ convert: js_to_mono_enum.bind (this), indirect: 'i64'}], size: 8});
-    result.set("j", { steps: [{ convert: js_to_mono_enum.bind(BINDING), indirect: "i32" }], size: 8 });
+    result.set(ArgsMarshal.Int32Enum, { steps: [{ convert: js_to_mono_enum.bind(BINDING), indirect: "i32" }], size: 8 });
 
-    result.set("i", { steps: [{ indirect: "i32" }], size: 8 });
-    result.set("l", { steps: [{ indirect: "i64" }], size: 8 });
-    result.set("f", { steps: [{ indirect: "float" }], size: 8 });
-    result.set("d", { steps: [{ indirect: "double" }], size: 8 });
+    result.set(ArgsMarshal.Int32, { steps: [{ indirect: "i32" }], size: 8 });
+    result.set(ArgsMarshal.Int64, { steps: [{ indirect: "i64" }], size: 8 });
+    result.set(ArgsMarshal.Float32, { steps: [{ indirect: "float" }], size: 8 });
+    result.set(ArgsMarshal.Float64, { steps: [{ indirect: "double" }], size: 8 });
+
+    result.set(ArgsMarshal.ByteSpan, { steps: [{ indirect: "span-byte" }], size: 8 });
 }
 
 export function get_method_signature_info (typePtr : MonoType, methodPtr : MonoMethod) : MarshalSignatureInfo {
@@ -246,6 +248,13 @@ function _get_converter_for_marshal_string(typePtr: MonoType, method: MonoMethod
     return converter;
 }
 
+function _setSpan (offset : VoidPtr, span : Array<number>) : void {
+    if (!Array.isArray(span) || (span.length !== 2))
+        throw new Error(`Span must be an array of shape [offset, length_in_elements] but was ${span}`);
+    setU32(offset, span[0]);
+    setU32(<any>offset + 4, span[1]);
+}
+
 export function _compile_converter_for_marshal_string(typePtr: MonoType, method: MonoMethod, args_marshal: ArgsMarshalString): Converter {
     const converter = _get_converter_for_marshal_string(typePtr, method, args_marshal);
     if (typeof (converter.args_marshal) !== "string")
@@ -277,7 +286,8 @@ export function _compile_converter_for_marshal_string(typePtr: MonoType, method:
         setU32,
         setF32,
         setF64,
-        setI64
+        setI64,
+        _setSpan
     };
     let indirectLocalOffset = 0;
 
@@ -290,7 +300,18 @@ export function _compile_converter_for_marshal_string(typePtr: MonoType, method:
 
     for (let i = 0; i < converter.steps.length; i++) {
         const step = converter.steps[i];
-        const closureKey = "step" + i;
+        let closureKey = "step" + i;
+        if (
+            (typeof(step.convert) === "function") &&
+            !!step.convert.name &&
+            (step.convert.name !== "anonymous") &&
+            // Function.name can be 'bound x' or 'get x', etc
+            (step.convert.name.indexOf(" ") < 0) &&
+            // Symbol-named functions will have a name like '[sym]'
+            (step.convert.name.indexOf("[") < 0) &&
+            !(step.convert.name in closure)
+        )
+            closureKey = step.convert.name;
         const valueKey = "value" + i;
 
         const argKey = "arg" + i;
@@ -333,6 +354,9 @@ export function _compile_converter_for_marshal_string(typePtr: MonoType, method:
                     break;
                 case "i64":
                     body.push(`setI64(${offsetText}, ${valueKey});`);
+                    break;
+                case "span-byte":
+                    body.push(`_setSpan(${offsetText}, ${valueKey});`);
                     break;
                 default:
                     throw new Error("Unimplemented indirect type: " + step.indirect);
@@ -628,10 +652,12 @@ declare const enum ArgsMarshal {
     Float32 = "f", // float
     Float64 = "d", // double
     String = "s", // string
-    Char = "s", // interned string
+    InternedString = "S", // interned string
+    Uri = "u",
     JSObj = "o", // js object will be converted to a C# object (this will box numbers/bool/promises)
     MONOObj = "m", // raw mono object. Don't use it unless you know what you're doing
     Auto = "a", // the bindings layer will select an appropriate converter based on the C# method signature
+    ByteSpan = "b", // Span<byte>
 }
 
 // to suppress marshaling of the return value, place '!' at the end of args_marshal, i.e. 'ii!' instead of 'ii'
@@ -647,7 +673,7 @@ export type ArgsMarshalString = ""
     | `${ArgsMarshal}${ArgsMarshal}${ArgsMarshal}${ArgsMarshal}${_ExtraArgsMarshalOperators}`;
 
 
-type ConverterStepIndirects = "u32" | "i32" | "float" | "double" | "i64"
+type ConverterStepIndirects = "u32" | "i32" | "float" | "double" | "i64" | "span-byte"
 
 export type Converter = {
     steps: {

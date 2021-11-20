@@ -99,7 +99,8 @@ namespace System.Runtime.InteropServices.JavaScript
             STRING_INTERNED = 29,
             VOID = 30,
             ENUM64 = 31,
-            POINTER = 32
+            POINTER = 32,
+            SPAN_BYTE = 33,
         }
 
         // see src/mono/wasm/driver.c MARSHAL_ERROR_xxx
@@ -207,7 +208,7 @@ namespace System.Runtime.InteropServices.JavaScript
 
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2070:UnrecognizedReflectionPattern",
             Justification = "Trimming doesn't affect types eligible for marshalling. Different exception for invalid inputs doesn't matter.")]
-        private static unsafe IntPtr GetMarshalMethodPointer (Type type, string name, out Type returnType, out Type parameterType) {
+        private static unsafe IntPtr GetMarshalMethodPointer (Type type, string name, out Type? returnType, out Type parameterType, bool hasScratchBuffer) {
             var info = type.GetMethod(
                 name, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic
             );
@@ -215,11 +216,19 @@ namespace System.Runtime.InteropServices.JavaScript
                 throw new WasmInteropException($"{type.Name} must have a static {name} method");
 
             var p = info.GetParameters();
-            if ((p.Length != 1) || (p[0].ParameterType is null))
-                throw new WasmInteropException($"Method {type.Name}.{name} must accept exactly one parameter");
+            int expectedLength = hasScratchBuffer ? 2 : 1;
+            if ((p.Length != expectedLength) || (p[0].ParameterType is null))
+                throw new WasmInteropException($"Method {type.Name}.{name} must accept exactly {expectedLength} parameter(s)");
 
-            if (info.ReturnType is null)
-                throw new WasmInteropException($"Method {type.Name}.{name} must have a return value");
+            if (hasScratchBuffer) {
+                if ((info.ReturnType != null) && (info.ReturnType != typeof(void)))
+                    throw new WasmInteropException($"Method {type.Name}.{name} must not have a return value");
+                if (p[1].ParameterType?.Name != "Span`1")
+                    throw new WasmInteropException($"Method {type.Name}.{name}'s second parameter must be of type Span<byte>");
+            } else {
+                if (info.ReturnType is null)
+                    throw new WasmInteropException($"Method {type.Name}.{name} must have a return value");
+            }
 
             parameterType = p[0].ParameterType;
             returnType = info.ReturnType;
@@ -248,11 +257,17 @@ namespace System.Runtime.InteropServices.JavaScript
             if (marshalerType is null)
                 return "null";
 
+            var scratchInfo = marshalerType.GetProperty("ScratchBufferSize", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            var _scratchBufferSize = scratchInfo?.GetValue(null);
+            var scratchBufferSize = _scratchBufferSize != null
+                ? (int)_scratchBufferSize
+                : (int?)null;
+
             var jsToInterchange = GetAndEscapeJavascriptLiteralProperty(marshalerType, "JavaScriptToInterchangeTransform");
             var interchangeToJs = GetAndEscapeJavascriptLiteralProperty(marshalerType, "InterchangeToJavaScriptTransform");
 
-            var inputPtr = GetMarshalMethodPointer(marshalerType, "FromJavaScript", out Type fromReturnType, out Type fromParameterType);
-            var outputPtr = GetMarshalMethodPointer(marshalerType, "ToJavaScript", out Type toReturnType, out Type toParameterType);
+            var inputPtr = GetMarshalMethodPointer(marshalerType, "FromJavaScript", out Type? fromReturnType, out Type fromParameterType, false);
+            var outputPtr = GetMarshalMethodPointer(marshalerType, "ToJavaScript", out Type? toReturnType, out Type toParameterType, scratchBufferSize.HasValue);
 
             if (fromReturnType != type)
                 throw new WasmInteropException($"{marshalerType.Name}.FromJavaScript's return type must be {type.Name} but was {fromReturnType}");
@@ -266,10 +281,17 @@ namespace System.Runtime.InteropServices.JavaScript
                     throw new WasmInteropException($"{marshalerType.Name}.ToJavaScript's parameter must be of type {type.Name} but was {toParameterType}");
             }
 
-            return ("{\n" + $"\"typePtr\": {typePtr}, \n" +
-                $"\"jsToInterchange\": {jsToInterchange}, \"interchangeToJs\": {interchangeToJs}, \n" +
-                $"\"inputPtr\": {inputPtr}, \"outputPtr\": {outputPtr} \n" +
-                "}");
+            var result = new StringBuilder();
+            result.AppendLine("{");
+            result.AppendLine($"\"typePtr\": {typePtr},");
+            if (scratchBufferSize.HasValue)
+                result.AppendLine($"\"scratchBufferSize\": {scratchBufferSize.Value},");
+            result.AppendLine($"\"jsToInterchange\": {jsToInterchange},");
+            result.AppendLine($"\"interchangeToJs\": {interchangeToJs},");
+            result.AppendLine($"\"inputPtr\": {inputPtr},");
+            result.AppendLine($"\"outputPtr\": {outputPtr}");
+            result.AppendLine("}");
+            return result.ToString();
         }
 
         private static MarshalType GetMarshalTypeFromType (Type? type) {
@@ -354,6 +376,8 @@ namespace System.Runtime.InteropServices.JavaScript
             // If you really need to marshal a custom Uri, define a custom marshaler for it
             else if (typeof(Uri) == type)
                 return MarshalType.URI;
+            else if (type == typeof(Span<byte>))
+                return MarshalType.SPAN_BYTE;
             else if (type.IsPointer)
                 return MarshalType.POINTER;
 
@@ -394,6 +418,8 @@ namespace System.Runtime.InteropServices.JavaScript
                     return 'a';
                 case MarshalType.POINTER:
                     return 'm';
+                case MarshalType.SPAN_BYTE:
+                    return 'b';
                 default:
                     if (defaultValue.HasValue)
                         return defaultValue.Value;

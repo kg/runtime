@@ -122,7 +122,7 @@ function _create_interchange_closure (typePtr : MonoType) : any {
     };
 }
 
-function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Function, js : string | undefined) : Function {
+function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Function, js : string | undefined, info : CustomMarshalerInfo) : Function {
     if (!js)
         return boundConverter;
 
@@ -232,14 +232,14 @@ function _get_struct_unboxer_for_type (typePtr : MonoType) {
                 return result;
             };
 
-            _struct_unboxer_cache.set (typePtr, _compile_interchange_to_js (typePtr, wrapped, interchangeToJs));
+            _struct_unboxer_cache.set (typePtr, _compile_interchange_to_js (typePtr, wrapped, interchangeToJs, info));
         }
     }
 
     return _struct_unboxer_cache.get (typePtr);
 }
 
-function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Function, js : string | undefined) : Function {
+function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Function, js : string | undefined, info : CustomMarshalerInfo) : Function {
     if (!js)
         return boundConverter;
 
@@ -303,7 +303,7 @@ function _pick_automatic_converter_for_user_type (methodPtr : MonoMethod, args_m
             convMethod, null, <ArgsMarshalString>signature, methodName
         );
 
-        const result = _compile_js_to_interchange (typePtr, boundConverter, jsToInterchange);
+        const result = _compile_js_to_interchange (typePtr, boundConverter, jsToInterchange, info);
 
         _automatic_converter_table.set (typePtr, result);
     }
