@@ -152,7 +152,7 @@ function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Functi
             `let filteredValue = ${filterName}(buffer, ${info.scratchBufferSize});\r\n` +
             "return filteredValue;";
     } else {
-        bodyJs = `let convertedValue = ${converterKey}(value), filteredValue = ${filterName}(value);\r\n` +
+        bodyJs = `let convertedValue = ${converterKey}(value), filteredValue = ${filterName}(convertedValue);\r\n` +
             "return filteredValue;";
     }
     const functionName = "interchange_to_js_for_type" + typePtr;

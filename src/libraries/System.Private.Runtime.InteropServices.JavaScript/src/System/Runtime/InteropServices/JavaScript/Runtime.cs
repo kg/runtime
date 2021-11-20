@@ -223,8 +223,8 @@ namespace System.Runtime.InteropServices.JavaScript
             if (hasScratchBuffer) {
                 if ((info.ReturnType != null) && (info.ReturnType != typeof(void)))
                     throw new WasmInteropException($"Method {type.Name}.{name} must not have a return value");
-                if (p[1].ParameterType?.Name != "Span`1")
-                    throw new WasmInteropException($"Method {type.Name}.{name}'s second parameter must be of type Span<byte>");
+                if ((p[1].ParameterType != typeof(Span<byte>)) && (p[1].ParameterType != typeof(ReadOnlySpan<byte>)))
+                    throw new WasmInteropException($"Method {type.Name}.{name}'s second parameter must be of type Span<byte> or ReadOnlySpan<byte>");
             } else {
                 if (info.ReturnType is null)
                     throw new WasmInteropException($"Method {type.Name}.{name} must have a return value");
@@ -381,7 +381,7 @@ namespace System.Runtime.InteropServices.JavaScript
             // If you really need to marshal a custom Uri, define a custom marshaler for it
             else if (typeof(Uri) == type)
                 return MarshalType.URI;
-            else if (type == typeof(Span<byte>))
+            else if ((type == typeof(Span<byte>)) || (type == typeof(ReadOnlySpan<byte>)))
                 return MarshalType.SPAN_BYTE;
             else if (type.IsPointer)
                 return MarshalType.POINTER;
