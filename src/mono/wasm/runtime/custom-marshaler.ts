@@ -244,23 +244,37 @@ function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Functi
         return boundConverter;
 
     const closure = _create_interchange_closure(typePtr);
+    const hasScratchBuffer = (info.scratchBufferSize || 0) > 0;
 
     let converterKey = boundConverter.name || "boundConverter";
     if (converterKey in closure)
         converterKey += "_";
     closure[converterKey] = boundConverter;
 
+    const filterParams = hasScratchBuffer
+        ? ["value", "buffer", "bufferSize"]
+        : ["value"];
+
     const filterExpression = _create_named_function(
-        "interchange_filter_for_type" + typePtr,
-        ["value"], js, closure
+        "js_to_interchange_filter_for_type" + typePtr,
+        filterParams, js, closure
     );
 
     closure.filter = filterExpression;
     const functionName = "js_to_interchange_for_type" + typePtr;
 
-    const bodyJs = "let filteredValue = filter(value);\r\n" +
-        `let convertedResult = ${converterKey}(filteredValue, method, parmIdx);\r\n` +
-        "return convertedResult;";
+    let bodyJs : string;
+    if (hasScratchBuffer) {
+        bodyJs = `let buffer = alloca(${info.scratchBufferSize});\r\n` +
+            `filter(value, buffer, ${info.scratchBufferSize});\r\n` +
+            `let span = [buffer, ${info.scratchBufferSize}];\r\n` +
+            `let convertedResult = ${converterKey}(span, method, parmIdx);\r\n` +
+            "return convertedResult;";
+    } else {
+        bodyJs = "let filteredValue = filter(value);\r\n" +
+            `let convertedResult = ${converterKey}(filteredValue, method, parmIdx);\r\n` +
+            "return convertedResult;";
+    }
 
     const result = _create_named_function(
         functionName,

@@ -113,6 +113,9 @@ export function _create_rebindable_named_function(name: string, argumentNames: s
         rawFunctionText.replace(lineBreakRE, "\r\n    ") +
         `};\r\nreturn ${escapedFunctionIdentifier};\r\n`;
 
+    console.log(rawFunctionText);
+    console.log("");
+
     return new Function("__closure__", rawFunctionText);
 }
 

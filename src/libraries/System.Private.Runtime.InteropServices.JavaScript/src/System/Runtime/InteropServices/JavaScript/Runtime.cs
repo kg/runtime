@@ -266,6 +266,11 @@ namespace System.Runtime.InteropServices.JavaScript
             var jsToInterchange = GetAndEscapeJavascriptLiteralProperty(marshalerType, "JavaScriptToInterchangeTransform");
             var interchangeToJs = GetAndEscapeJavascriptLiteralProperty(marshalerType, "InterchangeToJavaScriptTransform");
 
+            if (scratchBufferSize.HasValue) {
+                if ((jsToInterchange == "null") || (interchangeToJs == "null"))
+                    throw new WasmInteropException($"{marshalerType.Name} must provide interchange transforms if it has a scratch buffer");
+            }
+
             var inputPtr = GetMarshalMethodPointer(marshalerType, "FromJavaScript", out Type? fromReturnType, out Type fromParameterType, false);
             var outputPtr = GetMarshalMethodPointer(marshalerType, "ToJavaScript", out Type? toReturnType, out Type toParameterType, scratchBufferSize.HasValue);
 

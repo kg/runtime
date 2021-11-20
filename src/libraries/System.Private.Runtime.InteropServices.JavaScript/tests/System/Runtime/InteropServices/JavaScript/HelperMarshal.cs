@@ -71,23 +71,38 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             }
         }
 
-        public static class CustomVector3Marshaler {
-            public static string JavaScriptToInterchangeTransform => "let ptr = alloca(4 * 3), view = new Float32Array(Module.HEAPU8.buffer, ptr, 3); " +
-                "for (let i = 0; i < 3; i++) view[i] = value[i];" +
-                "return ptr;";
-            public static string InterchangeToJavaScriptTransform =>
-                "return [ getF32(value + 0), getF32(value + 4), getF32(value + 8) ]";
+        public static unsafe class CustomVector3Marshaler {
+            public static int ScratchBufferSize => sizeof(CustomVector3);
+            public static string JavaScriptToInterchangeTransform =>
+    @"
+    if (bufferSize !== 12)
+        throw new Error('Invalid buffer size');
+    if (!Array.isArray(value) || (value.length !== 3))
+        throw new Error('Invalid vector3, expected [f, f, f]');
+    setF32(buffer + 0, value[0]);
+    setF32(buffer + 4, value[1]);
+    setF32(buffer + 8, value[2]);
+    ";
 
-            public static unsafe CustomVector3 FromJavaScript (float * p) {
-                return new CustomVector3 {
-                    X = p[0],
-                    Y = p[1],
-                    Z = p[2]
-                };
+            public static string InterchangeToJavaScriptTransform =>
+    @"
+    if (bufferSize !== 12)
+        throw new Error('Invalid buffer size');
+    return [
+        getF32(buffer + 0),
+        getF32(buffer + 4),
+        getF32(buffer + 8)
+    ];
+    ";
+
+            public static void ToJavaScript (ref CustomVector3 value, Span<byte> buffer) {
+                Console.WriteLine($"CustomVector3 ToJavaScript({value}, {buffer.ToString()})");
+                MemoryMarshal.Write(buffer, ref value);
             }
 
-            public static unsafe CustomVector3 * ToJavaScript (CustomVector3 * pv3) {
-                return pv3;
+            public static CustomVector3 FromJavaScript (Span<byte> buffer) {
+                Console.WriteLine($"CustomVector3 FromJavaScript({buffer.ToString()})");
+                return MemoryMarshal.AsRef<CustomVector3>(buffer);
             }
         }
 
