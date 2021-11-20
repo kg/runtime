@@ -127,23 +127,37 @@ function _compile_interchange_to_js (typePtr : MonoType, boundConverter : Functi
         return boundConverter;
 
     const closure = _create_interchange_closure(typePtr);
+    const hasScratchBuffer = (info.scratchBufferSize || 0) > 0;
 
     let converterKey = boundConverter.name || "boundConverter";
     if (converterKey in closure)
         converterKey += "_";
     closure[converterKey] = boundConverter;
 
-    const filterExpression = _create_named_function(
-        "interchange_to_js_filter_for_type" + typePtr,
-        ["value"], js, closure
-    );
-    closure.filter = filterExpression;
+    const filterParams = hasScratchBuffer
+        ? ["buffer", "bufferSize"]
+        : ["value"];
 
-    const bodyJs = `let value = ${converterKey}(js_value), filteredValue = filter(value);\r\n` +
-        "return filteredValue;";
+    const filterName = "interchange_to_js_filter_for_type" + typePtr;
+
+    const filterExpression = _create_named_function(
+        filterName, filterParams, js, closure
+    );
+    closure[filterName] = filterExpression;
+
+    let bodyJs : string;
+    if (hasScratchBuffer) {
+        bodyJs = `let buffer = alloca(${info.scratchBufferSize});\r\n` +
+            `${converterKey}(value, [buffer, ${info.scratchBufferSize}]);\r\n` +
+            `let filteredValue = ${filterName}(buffer, ${info.scratchBufferSize});\r\n` +
+            "return filteredValue;";
+    } else {
+        bodyJs = `let convertedValue = ${converterKey}(value), filteredValue = ${filterName}(value);\r\n` +
+            "return filteredValue;";
+    }
     const functionName = "interchange_to_js_for_type" + typePtr;
     const result = _create_named_function(
-        functionName, ["js_value"], bodyJs, closure
+        functionName, ["value"], bodyJs, closure
     );
 
     return result;
@@ -223,16 +237,14 @@ function _get_struct_unboxer_for_type (typePtr : MonoType) {
             _struct_unboxer_cache.set (typePtr, null);
         } else {
             const typeName = _get_type_name(typePtr);
+            const signature = (info.scratchBufferSize || 0) > 0
+                ? "mb"
+                : "m";
             const boundConverter = mono_bind_method (
-                convMethod, null, "m", typeName + "$ToJavaScript"
+                convMethod, null, signature, typeName + "$ToJavaScript"
             );
 
-            const wrapped = function () {
-                const result = boundConverter.apply(null, arguments);
-                return result;
-            };
-
-            _struct_unboxer_cache.set (typePtr, _compile_interchange_to_js (typePtr, wrapped, interchangeToJs, info));
+            _struct_unboxer_cache.set (typePtr, _compile_interchange_to_js (typePtr, boundConverter, interchangeToJs, info));
         }
     }
 
@@ -255,23 +267,23 @@ function _compile_js_to_interchange (typePtr : MonoType, boundConverter : Functi
         ? ["value", "buffer", "bufferSize"]
         : ["value"];
 
+    const filterName = "js_to_interchange_filter_for_type" + typePtr;
     const filterExpression = _create_named_function(
-        "js_to_interchange_filter_for_type" + typePtr,
-        filterParams, js, closure
+        filterName, filterParams, js, closure
     );
 
-    closure.filter = filterExpression;
+    closure[filterName] = filterExpression;
     const functionName = "js_to_interchange_for_type" + typePtr;
 
     let bodyJs : string;
     if (hasScratchBuffer) {
         bodyJs = `let buffer = alloca(${info.scratchBufferSize});\r\n` +
-            `filter(value, buffer, ${info.scratchBufferSize});\r\n` +
+            `${filterName}(value, buffer, ${info.scratchBufferSize});\r\n` +
             `let span = [buffer, ${info.scratchBufferSize}];\r\n` +
             `let convertedResult = ${converterKey}(span, method, parmIdx);\r\n` +
             "return convertedResult;";
     } else {
-        bodyJs = "let filteredValue = filter(value);\r\n" +
+        bodyJs = `let filteredValue = ${filterName}(value);\r\n` +
             `let convertedResult = ${converterKey}(filteredValue, method, parmIdx);\r\n` +
             "return convertedResult;";
     }

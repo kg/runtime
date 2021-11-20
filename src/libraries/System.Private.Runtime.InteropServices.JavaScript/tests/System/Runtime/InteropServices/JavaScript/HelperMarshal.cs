@@ -88,20 +88,14 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
     @"
     if (bufferSize !== 12)
         throw new Error('Invalid buffer size');
-    return [
-        getF32(buffer + 0),
-        getF32(buffer + 4),
-        getF32(buffer + 8)
-    ];
+    return [getF32(buffer + 0), getF32(buffer + 4), getF32(buffer + 8)];
     ";
 
             public static void ToJavaScript (ref CustomVector3 value, Span<byte> buffer) {
-                Console.WriteLine($"CustomVector3 ToJavaScript({value}, {buffer.ToString()})");
                 MemoryMarshal.Write(buffer, ref value);
             }
 
-            public static CustomVector3 FromJavaScript (Span<byte> buffer) {
-                Console.WriteLine($"CustomVector3 FromJavaScript({buffer.ToString()})");
+            public static CustomVector3 FromJavaScript (ReadOnlySpan<byte> buffer) {
                 return MemoryMarshal.AsRef<CustomVector3>(buffer);
             }
         }

@@ -113,8 +113,10 @@ export function _create_rebindable_named_function(name: string, argumentNames: s
         rawFunctionText.replace(lineBreakRE, "\r\n    ") +
         `};\r\nreturn ${escapedFunctionIdentifier};\r\n`;
 
+    /*
     console.log(rawFunctionText);
     console.log("");
+    */
 
     return new Function("__closure__", rawFunctionText);
 }
@@ -129,6 +131,8 @@ export function _create_primitive_converters(): void {
     // also as those are callback arguments and we don't have platform code which would release the in-flight reference on C# end
     result.set(ArgsMarshal.JSObj, { steps: [{ convert: _js_to_mono_obj.bind(BINDING, false) }], size: 0, needs_root: true });
     result.set(ArgsMarshal.Uri, { steps: [{ convert: _js_to_mono_uri.bind(BINDING, false) }], size: 0, needs_root: true });
+
+    // FIXME: Some of these size values should be 4
 
     // result.set ('k', { steps: [{ convert: js_to_mono_enum.bind (this), indirect: 'i64'}], size: 8});
     result.set(ArgsMarshal.Int32Enum, { steps: [{ convert: js_to_mono_enum.bind(BINDING), indirect: "i32" }], size: 8 });
