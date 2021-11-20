@@ -169,7 +169,7 @@ export function get_method_signature_info (typePtr : MonoType, methodPtr : MonoM
 }
 
 function _create_converter_for_marshal_string(typePtr: MonoType, method: MonoMethod, args_marshal: ArgsMarshalString): Converter {
-    let sigInfo : any = null;
+    let sigInfo : MarshalSignatureInfo | null = null;
     const steps = [];
     let size = 0;
     let is_result_definitely_unmarshaled = false,
@@ -179,23 +179,35 @@ function _create_converter_for_marshal_string(typePtr: MonoType, method: MonoMet
         depends_on_method_arguments = false;
 
     for (let i = 0; i < args_marshal.length; ++i) {
-        const key = args_marshal[i];
+        let key = args_marshal[i];
 
-        if (key === "a") {
+        if (key === ArgsMarshal.Auto) {
             if (!method)
                 throw new Error("Cannot use automatic argument type handling without a method ptr");
             if (!sigInfo)
                 sigInfo = get_method_signature_info(typePtr, method);
             if (!sigInfo)
                 throw new Error(`Failed to get signature info for method ${method}`);
+
             depends_on_method_arguments = true;
-            const step = _pick_automatic_converter(method, args_marshal, sigInfo.parameters[i]);
-            if (!step)
-                throw new Error(`Failed to select an automatic converter for parameter #${i} of method ${method}`);
-            steps.push(step);
-            needs_root_buffer = true;
-            size += step.size;
-            continue;
+
+            const paramInfo = sigInfo.parameters[i];
+            if (
+                (paramInfo.signatureChar !== "o") &&
+                (paramInfo.signatureChar !== "a")
+            ) {
+                // Using 'a' for a parameter of a basic type like float or string should work equivalently to
+                //  if we explicitly specified the correct type
+                key = paramInfo.signatureChar;
+            } else {
+                const step = _pick_automatic_converter(method, args_marshal, paramInfo);
+                if (!step)
+                    throw new Error(`Failed to select an automatic converter for parameter #${i} of method ${method}`);
+                steps.push(step);
+                needs_root_buffer = true;
+                size += step.size;
+                continue;
+            }
         }
 
         if (i === args_marshal.length - 1) {

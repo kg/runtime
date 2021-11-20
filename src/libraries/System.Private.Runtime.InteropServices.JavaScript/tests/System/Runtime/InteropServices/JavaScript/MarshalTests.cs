@@ -1095,7 +1095,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         {
             HelperMarshal._ccValue = new HelperMarshal.CustomClass ();
             Runtime.InvokeJS(
-                @"App.call_test_method ('InvokeCustomClass', [ 4.13 ], 'a');"
+                "App.call_test_method ('InvokeCustomClass', [ 4.13 ], 'a');"
             );
             Assert.Equal(4.13, HelperMarshal._ccValue?.D);
         }
@@ -1105,7 +1105,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         {
             HelperMarshal._csValue = default(HelperMarshal.CustomStruct);
             Runtime.InvokeJS(
-                @"App.call_test_method ('InvokeCustomStruct', [ 4.13 ], 'a');"
+                "App.call_test_method ('InvokeCustomStruct', [ 4.13 ], 'a');"
             );
             Assert.Equal(4.13, HelperMarshal._csValue.D);
         }
@@ -1116,7 +1116,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             HelperMarshal._dateTimeValue = default(DateTime);
             Runtime.InvokeJS(
                 $"var dt = new Date('{ExpectedDateString}');\r\n" +
-                @"App.call_test_method ('InvokeCustomDate', [ dt ], 'a');"
+                "App.call_test_method ('InvokeCustomDate', [ dt ], 'a');"
             );
             Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
@@ -1126,8 +1126,8 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         {
             HelperMarshal._ccValue = new HelperMarshal.CustomClass ();
             Runtime.InvokeJS(
-                @"var cc = App.call_test_method ('ReturnCustomClass', [ 4.13 ], 'a');" +
-                @"App.call_test_method ('InvokeCustomClass', [ cc ], 'a');"
+                "var cc = App.call_test_method ('ReturnCustomClass', [ 4.13 ], 'a');" +
+                "App.call_test_method ('InvokeCustomClass', [ cc ], 'a');"
             );
             Assert.Equal(4.13, HelperMarshal._ccValue?.D);
         }
@@ -1137,8 +1137,8 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         {
             HelperMarshal._csValue = default(HelperMarshal.CustomStruct);
             Runtime.InvokeJS(
-                @"var cs = App.call_test_method ('ReturnCustomStruct', [ 4.13 ], 'a');" +
-                @"App.call_test_method ('InvokeCustomStruct', [ cs ], 'a');"
+                "var cs = App.call_test_method ('ReturnCustomStruct', [ 4.13 ], 'a');" +
+                "App.call_test_method ('InvokeCustomStruct', [ cs ], 'a');"
             );
             Assert.Equal(4.13, HelperMarshal._csValue.D);
         }
@@ -1149,8 +1149,8 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
             HelperMarshal._dateTimeValue = default(DateTime);
             Runtime.InvokeJS(
                 $"var dt = new Date('{ExpectedDateString}');\r\n" +
-                @"var cd = App.call_test_method ('ReturnCustomDate', [ dt ], 'a');" +
-                @"App.call_test_method ('InvokeCustomDate', [ cd ], 'a');"
+                "var cd = App.call_test_method ('ReturnCustomDate', [ dt ], 'a');" +
+                "App.call_test_method ('InvokeCustomDate', [ cd ], 'a');"
             );
             Assert.Equal(ExpectedDateTime, HelperMarshal._dateTimeValue);
         }
@@ -1160,7 +1160,7 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         {
             HelperMarshal._vec3Value = default(HelperMarshal.CustomVector3);
             Runtime.InvokeJS(
-                @"App.call_test_method ('InvokeCustomVector3', [ [1, 2.5, 4] ], 'a');"
+                "App.call_test_method ('InvokeCustomVector3', [ [1, 2.5, 4] ], 'a');"
             );
             Assert.Equal(1, HelperMarshal._vec3Value.X);
             Assert.Equal(2.5, HelperMarshal._vec3Value.Y);
@@ -1172,12 +1172,30 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         {
             HelperMarshal._vec3Value = default(HelperMarshal.CustomVector3);
             Runtime.InvokeJS(
-                @"var cv3 = App.call_test_method ('ReturnCustomVector3', [ [1, 2.5, 4] ], 'a');" +
-                @"App.call_test_method ('InvokeCustomVector3', [ cv3 ], 'a');"
+                "var cv3 = App.call_test_method ('ReturnCustomVector3', [ [1, 2.5, 4] ], 'a');" +
+                "App.call_test_method ('InvokeCustomVector3', [ cv3 ], 'a');"
             );
             Assert.Equal(1, HelperMarshal._vec3Value.X);
             Assert.Equal(2.5, HelperMarshal._vec3Value.Y);
             Assert.Equal(4, HelperMarshal._vec3Value.Z);
+        }
+
+        [Fact]
+        public static void AddCustomVector3()
+        {
+            HelperMarshal._stringResource = null;
+            HelperMarshal._vec3Value = default(HelperMarshal.CustomVector3);
+            Runtime.InvokeJS(
+                "var cva = App.call_test_method ('MakeCustomVector3', [1, 2.5, 4], 'aaa');" +
+                "var cvb = App.call_test_method ('MakeCustomVector3', [4, 3, 2], 'aaa');" +
+                "var res = App.call_test_method ('AddCustomVector3', [ cva, cvb ], 'aa');" +
+                "App.call_test_method ('InvokeCustomVector3', [ res ], 'a');" +
+                "App.call_test_method ('InvokeString', [ String(res) ], 'a');"
+            );
+            Assert.Equal("5,5.5,6", HelperMarshal._stringResource);
+            Assert.Equal(5, HelperMarshal._vec3Value.X);
+            Assert.Equal(5.5, HelperMarshal._vec3Value.Y);
+            Assert.Equal(6, HelperMarshal._vec3Value.Z);
         }
     }
 }

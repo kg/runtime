@@ -242,9 +242,25 @@ namespace System.Runtime.InteropServices.JavaScript.Tests
         {
             _vec3Value = cv3;
         }
+        private static CustomVector3 MakeCustomVector3(float x, float y, float z)
+        {
+            return new CustomVector3 {
+                X = x,
+                Y = y,
+                Z = z
+            };
+        }
         private static CustomVector3 ReturnCustomVector3(CustomVector3 cv3)
         {
             return cv3;
+        }
+        private static CustomVector3 AddCustomVector3(CustomVector3 lhs, CustomVector3 rhs)
+        {
+            return new CustomVector3 {
+                X = lhs.X + rhs.X,
+                Y = lhs.Y + rhs.Y,
+                Z = lhs.Z + rhs.Z
+            };
         }
 
         internal static System.Uri _uriValue;
