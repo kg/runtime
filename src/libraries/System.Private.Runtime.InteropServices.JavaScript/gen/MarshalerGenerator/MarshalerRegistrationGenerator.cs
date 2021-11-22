@@ -164,24 +164,22 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
             foreach (var typeDeclaration in types)
             {
                 var semanticModel = compilation.GetSemanticModel(typeDeclaration.SyntaxTree);
+                var marshalerSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
 
                 foreach (AttributeListSyntax attributeListSyntax in typeDeclaration.AttributeLists)
                 {
                     foreach (AttributeSyntax attributeSyntax in attributeListSyntax.Attributes)
                     {
-                        IMethodSymbol methodSymbol = semanticModel.GetSymbolInfo(attributeSyntax).Symbol as IMethodSymbol;
-                        if (methodSymbol != null)
+                        if (semanticModel.GetSymbolInfo(attributeSyntax).Symbol is IMethodSymbol attributeConstructorSymbol)
                         {
-                            string fullName = methodSymbol.ContainingType.ToDisplayString();
-                            if (fullName == AttributeFullName)
+                            string attributeFullName = attributeConstructorSymbol.ContainingType.ToDisplayString();
+                            if (attributeFullName == AttributeFullName)
                             {
-                                ITypeSymbol marshalerSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
-
                                 if (attributeSyntax.ArgumentList != null && attributeSyntax.ArgumentList.Arguments.Count == 1)
                                 {
                                     if (attributeSyntax.ArgumentList.Arguments[0].Expression is TypeOfExpressionSyntax typeOfSyntax)
                                     {
-                                        ITypeSymbol marshaledSymbol = semanticModel.GetTypeInfo(typeOfSyntax.Type).Type;
+                                        var marshaledSymbol = semanticModel.GetTypeInfo(typeOfSyntax.Type).Type;
                                         if (marshaledSymbol != null)
                                         {
                                             mappings.Add((marshaledSymbol.ToDisplayString(), marshalerSymbol.ToDisplayString()));
