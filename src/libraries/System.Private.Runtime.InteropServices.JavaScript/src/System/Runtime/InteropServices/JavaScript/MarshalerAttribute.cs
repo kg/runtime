@@ -6,5 +6,8 @@ namespace System.Runtime.InteropServices.JavaScript
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class MarshalerAttribute : Attribute
     {
+        public MarshalerAttribute(Type type)
+        {
+        }
     }
 }

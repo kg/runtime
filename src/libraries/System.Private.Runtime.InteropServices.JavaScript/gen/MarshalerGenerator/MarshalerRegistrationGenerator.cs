@@ -12,7 +12,7 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
 {
     [Generator]
-    internal class AssemblyStartupTypeofGenerator : IIncrementalGenerator
+    internal class MarshalerRegistrationGenerator : IIncrementalGenerator
     {
         private const string AttributeFullName = "System.Runtime.InteropServices.JavaScript.MarshalerAttribute";
 
@@ -68,25 +68,48 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
             if (types.IsDefaultOrEmpty)
                 return;
 
-            var statements = new StatementSyntax[types.Length];
-            for (int i = 0; i < types.Length; i++)
-            {
-                statements[i] = LocalDeclarationStatement(
-                    VariableDeclaration(
-                        IdentifierName(
-                            Identifier("var")
+            var statements = new StatementSyntax[types.Length + 1];
+            statements[0] = LocalDeclarationStatement(
+                VariableDeclaration(
+                    PredefinedType(
+                        Token(SyntaxKind.IntKeyword)
+                    ),
+                    SingletonSeparatedList(
+                        VariableDeclarator(
+                            Identifier("temp")
                         )
                     )
-                    .WithVariables(
-                        SingletonSeparatedList(
-                            VariableDeclarator(
-                                Identifier($"type{i}"))
-                            .WithInitializer(
-                                EqualsValueClause(
-                                    TypeOfExpression(
-                                        IdentifierName(types[i].ToDisplayString())
+                )
+            );
+
+            for (int i = 0; i < types.Length; i++)
+            {
+                string marshalerType = types[i].ToDisplayString();
+
+                statements[i + 1] = ExpressionStatement(
+                    InvocationExpression(
+                        MemberAccessExpression(
+                            SyntaxKind.SimpleMemberAccessExpression,
+                            IdentifierName("Interop.Runtime"),
+                            IdentifierName("InvokeJS")
+                        ),
+                        ArgumentList(
+                            SeparatedList<ArgumentSyntax>(
+                                new SyntaxNodeOrToken[]{
+                                    Argument(
+                                        LiteralExpression(
+                                            SyntaxKind.StringLiteralExpression,
+                                            Literal($"MONO.mono_wasm_register_custom_marshaler('System.Uri', '{marshalerType}')")
+                                        )
+                                    ),
+                                    Token(SyntaxKind.CommaToken),
+                                    Argument(
+                                        IdentifierName("temp")
                                     )
-                                )
+                                    .WithRefOrOutKeyword(
+                                        Token(SyntaxKind.OutKeyword)
+                                    )
+                                }
                             )
                         )
                     )

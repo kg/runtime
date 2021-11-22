@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace System.Runtime.InteropServices.JavaScript
 {
+    [Marshaler(typeof(Uri))]
     public static class UriMarshaler
     {
         public static Uri FromJavaScript (string s)

@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace System.Runtime.InteropServices.JavaScript
 {
+    [Marshaler(typeof(DateTimeOffset))]
     public static class DateTimeOffsetMarshaler
     {
         public static string JavaScriptToInterchangeTransform => DateTimeMarshaler.JavaScriptToInterchangeTransform;
