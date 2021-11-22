@@ -25,22 +25,22 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
 //            }
 //#endif
 
-            IncrementalValuesProvider<ITypeSymbol> typeDeclarations = context.SyntaxProvider
+            IncrementalValuesProvider<ClassDeclarationSyntax> typeDeclarations = context.SyntaxProvider
                 .CreateSyntaxProvider(
-                    static (s, _) => IsSyntaxTargetForGeneration(s),
-                    static (ctx, _) => GetSemanticTargetForGeneration(ctx)
+                    static (s, _) => IsClassDeclarationWithAnyAttribute(s),
+                    static (ctx, _) => GetClassDeclarationsWithMarshalerAttribute(ctx)
                 )
                 .Where(static m => m is not null);
 
-            static bool IsSyntaxTargetForGeneration(SyntaxNode node)
-                => node is ClassDeclarationSyntax m && m.AttributeLists.Count > 0;
-
-            IncrementalValueProvider<(Compilation, ImmutableArray<ITypeSymbol>)> compilationAndClasses = context.CompilationProvider.Combine(typeDeclarations.Collect());
+            IncrementalValueProvider<(Compilation, ImmutableArray<ClassDeclarationSyntax>)> compilationAndClasses = context.CompilationProvider.Combine(typeDeclarations.Collect());
 
             context.RegisterSourceOutput(compilationAndClasses, static (spc, source) => Execute(source.Item1, source.Item2, spc));
         }
 
-        private static ITypeSymbol? GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
+        private static bool IsClassDeclarationWithAnyAttribute(SyntaxNode node)
+            => node is ClassDeclarationSyntax m && m.AttributeLists.Count > 0;
+
+        private static ClassDeclarationSyntax GetClassDeclarationsWithMarshalerAttribute(GeneratorSyntaxContext context)
         {
             var typeDeclaration = (ClassDeclarationSyntax)context.Node;
 
@@ -54,7 +54,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                         string fullName = methodSymbol.ContainingType.ToDisplayString();
                         if (fullName == AttributeFullName)
                         {
-                            return (ITypeSymbol)context.SemanticModel.GetDeclaredSymbol(typeDeclaration);
+                            return typeDeclaration;
                         }
                     }
                 }
@@ -63,12 +63,14 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
             return null;
         }
 
-        private static void Execute(Compilation compilation, ImmutableArray<ITypeSymbol> types, SourceProductionContext context)
+        private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> types, SourceProductionContext context)
         {
             if (types.IsDefaultOrEmpty)
                 return;
 
-            var statements = new StatementSyntax[types.Length + 1];
+            var mappings = GetMarshalerMappings(compilation, types);
+            var statements = new StatementSyntax[mappings.Count + 1];
+
             statements[0] = LocalDeclarationStatement(
                 VariableDeclaration(
                     PredefinedType(
@@ -82,10 +84,8 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                 )
             );
 
-            for (int i = 0; i < types.Length; i++)
+            for (int i = 0; i < mappings.Count; i++)
             {
-                string marshalerType = types[i].ToDisplayString();
-
                 statements[i + 1] = ExpressionStatement(
                     InvocationExpression(
                         MemberAccessExpression(
@@ -99,7 +99,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                                     Argument(
                                         LiteralExpression(
                                             SyntaxKind.StringLiteralExpression,
-                                            Literal($"MONO.mono_wasm_register_custom_marshaler('System.Uri', '{marshalerType}')")
+                                            Literal($"MONO.mono_wasm_register_custom_marshaler('{mappings[i].marshaledType}', '{mappings[i].marshalerType}')")
                                         )
                                     ),
                                     Token(SyntaxKind.CommaToken),
@@ -156,6 +156,45 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                 );
 
             context.AddSource("MarshalerInitializer.g.cs", unit.NormalizeWhitespace().ToFullString());
+        }
+
+        private static Collections.Generic.List<(string marshaledType, string marshalerType)> GetMarshalerMappings(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> types)
+        {
+            var mappings = new Collections.Generic.List<(string marshaledType, string marshalerType)>();
+            foreach (var typeDeclaration in types)
+            {
+                var semanticModel = compilation.GetSemanticModel(typeDeclaration.SyntaxTree);
+
+                foreach (AttributeListSyntax attributeListSyntax in typeDeclaration.AttributeLists)
+                {
+                    foreach (AttributeSyntax attributeSyntax in attributeListSyntax.Attributes)
+                    {
+                        IMethodSymbol methodSymbol = semanticModel.GetSymbolInfo(attributeSyntax).Symbol as IMethodSymbol;
+                        if (methodSymbol != null)
+                        {
+                            string fullName = methodSymbol.ContainingType.ToDisplayString();
+                            if (fullName == AttributeFullName)
+                            {
+                                ITypeSymbol marshalerSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
+
+                                if (attributeSyntax.ArgumentList != null && attributeSyntax.ArgumentList.Arguments.Count == 1)
+                                {
+                                    if (attributeSyntax.ArgumentList.Arguments[0].Expression is TypeOfExpressionSyntax typeOfSyntax)
+                                    {
+                                        ITypeSymbol marshaledSymbol = semanticModel.GetTypeInfo(typeOfSyntax.Type).Type;
+                                        if (marshaledSymbol != null)
+                                        {
+                                            mappings.Add((marshaledSymbol.ToDisplayString(), marshalerSymbol.ToDisplayString()));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return mappings;
         }
     }
 }

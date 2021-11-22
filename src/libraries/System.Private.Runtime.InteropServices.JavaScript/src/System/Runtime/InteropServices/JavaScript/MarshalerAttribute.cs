@@ -3,10 +3,10 @@
 
 namespace System.Runtime.InteropServices.JavaScript
 {
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public sealed class MarshalerAttribute : Attribute
     {
-        public MarshalerAttribute(Type type)
+        public MarshalerAttribute(Type marshaledType)
         {
         }
     }
