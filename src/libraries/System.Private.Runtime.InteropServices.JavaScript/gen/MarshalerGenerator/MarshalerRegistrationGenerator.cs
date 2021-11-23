@@ -97,9 +97,41 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                             SeparatedList<ArgumentSyntax>(
                                 new SyntaxNodeOrToken[]{
                                     Argument(
-                                        LiteralExpression(
-                                            SyntaxKind.StringLiteralExpression,
-                                            Literal($"MONO.mono_wasm_register_custom_marshaler('{mappings[i].marshaledType}', '{mappings[i].marshalerType}')")
+                                        InterpolatedStringExpression(
+                                            Token(SyntaxKind.InterpolatedStringStartToken)
+                                        )
+                                        .WithContents(
+                                            List(
+                                                new InterpolatedStringContentSyntax[] {
+                                                    InterpolatedStringText(
+                                                        "MONO.mono_wasm_register_custom_marshaler('"
+                                                    ),
+                                                    Interpolation(
+                                                        MemberAccessExpression(
+                                                            SyntaxKind.SimpleMemberAccessExpression,
+                                                            TypeOfExpression(
+                                                                IdentifierName(mappings[i].marshaledType)
+                                                            ),
+                                                            IdentifierName("AssemblyQualifiedName")
+                                                        )
+                                                    ),
+                                                    InterpolatedStringText(
+                                                        "', '"
+                                                    ),
+                                                    Interpolation(
+                                                        MemberAccessExpression(
+                                                            SyntaxKind.SimpleMemberAccessExpression,
+                                                            TypeOfExpression(
+                                                                IdentifierName(mappings[i].marshalerType)
+                                                            ),
+                                                            IdentifierName("AssemblyQualifiedName")
+                                                        )
+                                                    ),
+                                                    InterpolatedStringText(
+                                                        "');"
+                                                    )
+                                                }
+                                            )
                                         )
                                     ),
                                     Token(SyntaxKind.CommaToken),
@@ -127,9 +159,9 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                                     Identifier("Initialize")
                                 )
                                 .WithAttributeLists(
-                                    SingletonList<AttributeListSyntax>(
+                                    SingletonList(
                                         AttributeList(
-                                            SingletonSeparatedList<AttributeSyntax>(
+                                            SingletonSeparatedList(
                                                 Attribute(
                                                     IdentifierName("System.Runtime.CompilerServices.ModuleInitializer")
                                                 )
@@ -156,6 +188,19 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                 );
 
             context.AddSource("MarshalerInitializer.g.cs", unit.NormalizeWhitespace().ToFullString());
+        }
+
+        private static InterpolatedStringTextSyntax InterpolatedStringText(string text)
+        {
+            return SyntaxFactory.InterpolatedStringText(
+                Token(
+                    TriviaList(),
+                    SyntaxKind.InterpolatedStringTextToken,
+                    text,
+                    text,
+                    TriviaList()
+                )
+            );
         }
 
         private static Collections.Generic.List<(string marshaledType, string marshalerType)> GetMarshalerMappings(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> types)
