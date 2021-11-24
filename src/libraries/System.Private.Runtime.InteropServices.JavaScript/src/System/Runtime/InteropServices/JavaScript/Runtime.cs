@@ -193,10 +193,8 @@ namespace System.Runtime.InteropServices.JavaScript
                 }
 
                 if (ch < ' ') {
-                    sb.Append("\\x");
-                    if (ch <= 0xF)
-                        sb.Append('0');
-                    sb.Append(((int)ch).ToString("X"));
+                    sb.Append("\\u");
+                    sb.Append(((int)ch).ToString("X4"));
                 } else {
                     sb.Append(ch);
                 }
