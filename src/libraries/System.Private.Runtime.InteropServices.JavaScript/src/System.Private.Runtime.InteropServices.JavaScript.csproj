@@ -31,7 +31,6 @@
     <Compile Include="System\Runtime\InteropServices\JavaScript\HostObject.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\Function.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\JSObject.References.cs" />
-    <Compile Include="System\Runtime\InteropServices\JavaScript\MarshalerAttribute.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\DateTimeMarshaler.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\DateTimeOffsetMarshaler.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\UriMarshaler.cs" />

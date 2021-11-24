@@ -8,7 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="MarshalerAttributeGenerator.cs" />
     <Compile Include="MarshalerRegistrationGenerator.cs" />
+    <Compile Include="TypeNames.cs" />
   </ItemGroup>
 
   <ItemGroup>

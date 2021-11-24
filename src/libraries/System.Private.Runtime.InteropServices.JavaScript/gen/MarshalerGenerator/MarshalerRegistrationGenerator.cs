@@ -14,8 +14,6 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
     [Generator]
     internal class MarshalerRegistrationGenerator : IIncrementalGenerator
     {
-        private const string AttributeFullName = "System.Runtime.InteropServices.JavaScript.MarshalerAttribute";
-
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
 //#if DEBUG
@@ -52,7 +50,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                     if (methodSymbol != null)
                     {
                         string fullName = methodSymbol.ContainingType.ToDisplayString();
-                        if (fullName == AttributeFullName)
+                        if (fullName == TypeNames.AttributeFullName)
                         {
                             return typeDeclaration;
                         }
@@ -218,7 +216,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                         if (semanticModel.GetSymbolInfo(attributeSyntax).Symbol is IMethodSymbol attributeConstructorSymbol)
                         {
                             string attributeFullName = attributeConstructorSymbol.ContainingType.ToDisplayString();
-                            if (attributeFullName == AttributeFullName)
+                            if (attributeFullName == TypeNames.AttributeFullName)
                             {
                                 if (attributeSyntax.ArgumentList != null && attributeSyntax.ArgumentList.Arguments.Count == 1)
                                 {
