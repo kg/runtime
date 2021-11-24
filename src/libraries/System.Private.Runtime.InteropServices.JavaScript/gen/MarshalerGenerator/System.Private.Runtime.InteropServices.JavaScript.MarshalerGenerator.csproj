@@ -8,9 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="InteropGenerator.cs" />
     <Compile Include="MarshalerAttributeGenerator.cs" />
     <Compile Include="MarshalerRegistrationGenerator.cs" />
-    <Compile Include="TypeNames.cs" />
+    <Compile Include="Names.cs" />
   </ItemGroup>
 
   <ItemGroup>

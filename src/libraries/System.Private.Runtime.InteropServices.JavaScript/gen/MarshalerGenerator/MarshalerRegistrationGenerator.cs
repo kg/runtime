@@ -50,7 +50,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                     if (methodSymbol != null)
                     {
                         string fullName = methodSymbol.ContainingType.ToDisplayString();
-                        if (fullName == TypeNames.AttributeFullName)
+                        if (fullName == Names.AttributeFull)
                         {
                             return typeDeclaration;
                         }
@@ -88,8 +88,8 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                     InvocationExpression(
                         MemberAccessExpression(
                             SyntaxKind.SimpleMemberAccessExpression,
-                            IdentifierName("Interop.Runtime"),
-                            IdentifierName("InvokeJS")
+                            IdentifierName($"{Names.Interop}.{Names.InteropRuntime}"),
+                            IdentifierName(Names.InteropRuntimeInvokeJS)
                         ),
                         ArgumentList(
                             SeparatedList<ArgumentSyntax>(
@@ -216,7 +216,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                         if (semanticModel.GetSymbolInfo(attributeSyntax).Symbol is IMethodSymbol attributeConstructorSymbol)
                         {
                             string attributeFullName = attributeConstructorSymbol.ContainingType.ToDisplayString();
-                            if (attributeFullName == TypeNames.AttributeFullName)
+                            if (attributeFullName == Names.AttributeFull)
                             {
                                 if (attributeSyntax.ArgumentList != null && attributeSyntax.ArgumentList.Arguments.Count == 1)
                                 {

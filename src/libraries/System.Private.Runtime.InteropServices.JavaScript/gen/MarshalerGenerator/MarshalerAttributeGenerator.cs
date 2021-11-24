@@ -34,7 +34,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
         }
 
         private static bool IsClassDeclarationWithAnyAttribute(SyntaxNode node)
-            => node is ClassDeclarationSyntax m && m.Identifier.Text == TypeNames.AttributeName;
+            => node is ClassDeclarationSyntax m && m.Identifier.Text == Names.Attribute;
 
         private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> types, SourceProductionContext context)
         {
@@ -49,7 +49,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                         )
                         .WithMembers(
                             SingletonList<MemberDeclarationSyntax>(
-                                ClassDeclaration(TypeNames.AttributeName)
+                                ClassDeclaration(Names.Attribute)
                                 .WithAttributeLists(
                                     SingletonList(
                                         AttributeList(
@@ -101,7 +101,7 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                                 .WithMembers(
                                     SingletonList<MemberDeclarationSyntax>(
                                         ConstructorDeclaration(
-                                            Identifier(TypeNames.AttributeName)
+                                            Identifier(Names.Attribute)
                                         )
                                         .WithModifiers(
                                             TokenList(
