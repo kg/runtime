@@ -14,6 +14,8 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
     [Generator]
     internal class MarshalerRegistrationGenerator : IIncrementalGenerator
     {
+        private static readonly string[] _attributeNames = new[] { Names.Attribute, Names.AttributeFull, Names.AttributeWithoutSuffix, Names.AttributeFullWithoutSuffix };
+
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
 //#if DEBUG
@@ -46,14 +48,9 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
             {
                 foreach (AttributeSyntax attributeSyntax in attributeListSyntax.Attributes)
                 {
-                    IMethodSymbol methodSymbol = context.SemanticModel.GetSymbolInfo(attributeSyntax).Symbol as IMethodSymbol;
-                    if (methodSymbol != null)
+                    if (IsMarshalerAttribute(context.SemanticModel, attributeSyntax))
                     {
-                        string fullName = methodSymbol.ContainingType.ToDisplayString();
-                        if (fullName == Names.AttributeFull)
-                        {
-                            return typeDeclaration;
-                        }
+                        return typeDeclaration;
                     }
                 }
             }
@@ -213,20 +210,16 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
                 {
                     foreach (AttributeSyntax attributeSyntax in attributeListSyntax.Attributes)
                     {
-                        if (semanticModel.GetSymbolInfo(attributeSyntax).Symbol is IMethodSymbol attributeConstructorSymbol)
+                        if (IsMarshalerAttribute(semanticModel, attributeSyntax))
                         {
-                            string attributeFullName = attributeConstructorSymbol.ContainingType.ToDisplayString();
-                            if (attributeFullName == Names.AttributeFull)
+                            if (attributeSyntax.ArgumentList != null && attributeSyntax.ArgumentList.Arguments.Count == 1)
                             {
-                                if (attributeSyntax.ArgumentList != null && attributeSyntax.ArgumentList.Arguments.Count == 1)
+                                if (attributeSyntax.ArgumentList.Arguments[0].Expression is TypeOfExpressionSyntax typeOfSyntax)
                                 {
-                                    if (attributeSyntax.ArgumentList.Arguments[0].Expression is TypeOfExpressionSyntax typeOfSyntax)
+                                    var marshaledSymbol = semanticModel.GetTypeInfo(typeOfSyntax.Type).Type;
+                                    if (marshaledSymbol != null)
                                     {
-                                        var marshaledSymbol = semanticModel.GetTypeInfo(typeOfSyntax.Type).Type;
-                                        if (marshaledSymbol != null)
-                                        {
-                                            mappings.Add((marshaledSymbol.ToDisplayString(), marshalerSymbol.ToDisplayString()));
-                                        }
+                                        mappings.Add((marshaledSymbol.ToDisplayString(), marshalerSymbol.ToDisplayString()));
                                     }
                                 }
                             }
@@ -236,6 +229,31 @@ namespace System.Runtime.InteropServices.JavaScript.MarshalerGenerator
             }
 
             return mappings;
+        }
+
+        private static bool IsMarshalerAttribute(SemanticModel semanticModel, AttributeSyntax attributeSyntax)
+        {
+            IMethodSymbol methodSymbol = semanticModel.GetSymbolInfo(attributeSyntax).Symbol as IMethodSymbol;
+            if (methodSymbol != null)
+            {
+                string fullName = methodSymbol.ContainingType.ToDisplayString();
+                if (fullName == Names.AttributeFull)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                // Since the attribute is generated, we don't get a semantic information about it.
+
+                string fullName = attributeSyntax.Name.ToFullString();
+                if (_attributeNames.Contains(fullName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
