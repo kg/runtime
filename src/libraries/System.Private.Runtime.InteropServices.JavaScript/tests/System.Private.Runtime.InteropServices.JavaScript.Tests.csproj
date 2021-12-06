@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFrameworks>$(NetCoreAppCurrent)-Browser</TargetFrameworks>
@@ -27,10 +27,28 @@
     <Compile Include="System\Runtime\InteropServices\JavaScript\HelperMarshal.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\Http\HttpRequestMessageTest.cs" />
     <Compile Include="System\Runtime\InteropServices\JavaScript\ParallelTests.cs" />
+    <Compile Include="System\Runtime\InteropServices\JavaScript\SampleInterop.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Part of the shared framework but not exposed. -->
     <ProjectReference Include="..\src\System.Private.Runtime.InteropServices.JavaScript.csproj" />
     <ProjectReference Include="..\gen\MarshalerGenerator\System.Private.Runtime.InteropServices.JavaScript.MarshalerGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="MyGenerator_EnableLogging" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="SourceItemGroup" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Type" />
+
+    <CustomMarshaler Include="System.DateTime" Type="System.Runtime.InteropServices.JavaScript.DateTimeMarshaler" />
+  </ItemGroup>
+  <PropertyGroup>
+    <MyGenerator_EnableLogging>true</MyGenerator_EnableLogging>
+  </PropertyGroup>
+
+  <Target Name="_InjectAdditionalFiles" BeforeTargets="GenerateMSBuildEditorConfigFileShouldRun">
+    <ItemGroup>
+      <AdditionalFiles Include="@(CustomMarshaler)" SourceItemGroup="CustomMarshaler" Type="%(CustomMarshaler.Type)" />
+    </ItemGroup>
+  </Target>
 </Project>

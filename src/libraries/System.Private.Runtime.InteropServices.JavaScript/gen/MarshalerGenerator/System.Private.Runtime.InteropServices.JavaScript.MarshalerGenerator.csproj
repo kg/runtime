@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ImportFromJSGenerator.cs" />
     <Compile Include="InteropGenerator.cs" />
     <Compile Include="MarshalerAttributeGenerator.cs" />
     <Compile Include="MarshalerRegistrationGenerator.cs" />
