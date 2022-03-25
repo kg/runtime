@@ -6,7 +6,7 @@ import Configuration from "consts:configuration";
 
 import {
     mono_wasm_new_root, mono_wasm_release_roots, mono_wasm_new_external_root,
-    mono_wasm_new_root_buffer
+    mono_wasm_new_root_buffer, mono_wasm_with_hazard_buffer, mono_wasm_with_pinned_object
 } from "./roots";
 import {
     mono_wasm_send_dbg_command_with_parms,
@@ -43,14 +43,15 @@ import { mono_wasm_load_icu_data, mono_wasm_get_icudt_name } from "./icu";
 import { conv_string, conv_string_root, js_string_to_mono_string, js_string_to_mono_string_root, mono_intern_string } from "./strings";
 import { js_to_mono_obj, js_typed_array_to_array, mono_wasm_typed_array_to_array_ref, js_to_mono_obj_root, js_typed_array_to_array_root } from "./js-to-cs";
 import {
-    mono_array_to_js_array, mono_wasm_create_cs_owned_object_ref, unbox_mono_obj, unbox_mono_obj_root, mono_array_root_to_js_array
+    mono_array_to_js_array, mono_wasm_create_cs_owned_object_ref, unbox_mono_obj, unbox_mono_obj_root, mono_array_root_to_js_array,
+    mono_primitive_array_to_js_typed_array_ref
 } from "./cs-to-js";
 import {
     call_static_method, mono_bind_static_method, mono_call_assembly_entry_point,
     mono_method_resolve,
     mono_wasm_get_by_index_ref, mono_wasm_get_global_object_ref, mono_wasm_get_object_property_ref,
     mono_wasm_invoke_js,
-    mono_wasm_invoke_js_blazor,
+    mono_wasm_invoke_js_blazor, mono_wasm_invoke_js_blazor_ref,
     mono_wasm_invoke_js_with_args_ref, mono_wasm_set_by_index_ref, mono_wasm_set_object_property_ref
 } from "./method-calls";
 import { mono_wasm_typed_array_copy_to_ref, mono_wasm_typed_array_from_ref, mono_wasm_typed_array_copy_from_ref, mono_wasm_load_bytes_into_heap } from "./buffers";
@@ -84,8 +85,15 @@ const MONO = {
     mono_wasm_new_root,
     mono_wasm_new_external_root,
     mono_wasm_release_roots,
+    mono_wasm_with_hazard_buffer,
+    mono_wasm_with_pinned_object,
     mono_run_main,
     mono_run_main_and_exit,
+
+    mono_wasm_memcpy_from_managed_object: cwraps.mono_wasm_memcpy_from_managed_object,
+    mono_wasm_get_object_field_i32: cwraps.mono_wasm_get_object_field_i32,
+    mono_wasm_get_object_field_f64: cwraps.mono_wasm_get_object_field_f64,
+    mono_wasm_copy_managed_pointer_from_field: cwraps.mono_wasm_copy_managed_pointer_from_field,
 
     // for Blazor's future!
     mono_wasm_add_assembly: cwraps.mono_wasm_add_assembly,
@@ -172,6 +180,17 @@ const BINDING = {
     conv_string_root,
     unbox_mono_obj_root,
     mono_array_root_to_js_array,
+
+    /**
+     * Creates a JavaScript TypedArray of a given type from the contents of a managed array.
+     * @param type: The JS array type to construct (i.e. Uint8Array)
+     * @param array: The address-of-address of the managed array, i.e. root.address
+     * @param coerce: If true, the JS array type does not need to match the managed element type.
+     * @param copy: If false, a view over the managed array's heap elements will be returned instead of a copy.
+     *  You are responsible for keeping the array pinned until you are done with the view and you must ensure
+     *   that the native heap does not resize until you are done with the view.
+     */
+    mono_primitive_array_to_js_typed_array_ref,
 
     bind_static_method: mono_bind_static_method,
     call_assembly_entry_point: mono_call_assembly_entry_point,
@@ -342,6 +361,7 @@ export const __linker_exports: any = {
     // also keep in sync with driver.c
     mono_wasm_invoke_js,
     mono_wasm_invoke_js_blazor,
+    mono_wasm_invoke_js_blazor_ref,
     mono_wasm_trace_logger,
     mono_wasm_set_entrypoint_breakpoint,
 

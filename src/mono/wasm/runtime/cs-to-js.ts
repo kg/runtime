@@ -7,7 +7,7 @@ import {
     MonoArrayNull, MonoObject, MonoObjectNull, MonoString,
     MonoType, MonoTypeNull, MonoObjectRef, MonoStringRef, is_nullish
 } from "./types";
-import { runtimeHelpers } from "./imports";
+import { Module, runtimeHelpers } from "./imports";
 import { conv_string_root } from "./strings";
 import corebindings from "./corebindings";
 import cwraps from "./cwraps";
@@ -196,7 +196,7 @@ export function _wrap_delegate_gc_handle_as_function(gc_handle: GCHandle, after_
             get_js_owned_object_by_gc_handle_ref(gc_handle, delegateRoot.address);
             try {
                 // FIXME: Pass delegateRoot by-ref
-                const res = call_method_ref(result[delegate_invoke_symbol], delegateRoot, result[delegate_invoke_signature_symbol], args);
+                const res = call_method_ref(result[delegate_invoke_symbol], delegateRoot, result[delegate_invoke_signature_symbol], args, "Delegate.Invoke");
                 if (after_listener_callback) {
                     after_listener_callback();
                 }
@@ -368,4 +368,47 @@ export function _unbox_ref_type_root_as_js_object(root: WasmRoot<MonoObject>): a
     }
 
     return result;
+}
+
+export function mono_primitive_array_to_js_typed_array_ref<T extends ArrayBufferView> (
+    type: {
+        new(length: number): T,
+        new(buffer: ArrayBuffer, byteOffset: number, length: number): T,
+        BYTES_PER_ELEMENT: number,
+    },
+    array: MonoObjectRef,
+    // default: true
+    copy?: boolean,
+    // default: false
+    coerce?: boolean
+): T {
+    const oldStackTop = Module.stackSave();
+    try {
+        const tempBuf = <any>Module.stackAlloc(16);
+        // We copy the array address into our stack buffer to pin it so that we can safely manipulate its
+        //  elements for the remainder of our execution
+        cwraps.mono_wasm_copy_managed_pointer(tempBuf, array);
+        cwraps.mono_wasm_array_info_ref(tempBuf, tempBuf + 4, <any>0, tempBuf + 8, tempBuf + 12);
+
+        const lengthInElements = getU32(tempBuf + 4),
+            elementSizeBytes = getU32(tempBuf + 8),
+            firstElementOffset = getU32(tempBuf + 12),
+            viewLengthInElements = coerce === true
+                ? (lengthInElements * elementSizeBytes) / type.BYTES_PER_ELEMENT
+                : lengthInElements;
+
+        if ((coerce !== true) && (elementSizeBytes !== type.BYTES_PER_ELEMENT))
+            throw new Error(`Expected array type ${type.name || type} to have an element size of ${elementSizeBytes} but it was ${type.BYTES_PER_ELEMENT}`);
+        else if ((viewLengthInElements | 0) !== viewLengthInElements)
+            throw new Error(`Size of coerced array (${viewLengthInElements} elements) is not integral`);
+
+        const sourceView = new type(Module.HEAPU8.buffer, firstElementOffset, viewLengthInElements);
+        if (copy)
+            // TypedArrayView.slice() returns a shallow copy of the whole source array with a new backing buffer
+            return (sourceView as any).slice();
+        else
+            return sourceView;
+    } finally {
+        Module.stackRestore(oldStackTop);
+    }
 }

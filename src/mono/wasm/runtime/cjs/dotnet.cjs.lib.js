@@ -41,6 +41,7 @@ const linked_functions = [
     // driver.c
     "mono_wasm_invoke_js",
     "mono_wasm_invoke_js_blazor",
+    "mono_wasm_invoke_js_blazor_ref",
     "mono_wasm_trace_logger",
     "mono_wasm_set_entrypoint_breakpoint",
 

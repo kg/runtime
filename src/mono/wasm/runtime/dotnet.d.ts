@@ -89,20 +89,48 @@ declare function mono_wasm_new_root<T extends MonoObject>(value?: T | undefined)
  * @param {... WasmRoot} roots
  */
 declare function mono_wasm_release_roots(...args: WasmRoot<any>[]): void;
+/**
+ * Specific overloads for good tsc type info and errors
+ * If we merely exported the implementation below, it would be possible to do:
+ *  mono_wasm_with_hazard_buffer(n, (buf: ..., a: string, b: number) => (a + b), "hello") and
+ *  despite the fact that we omitted the 2nd userdata (a number) tsc would happily roll along,
+ *  and the userdata callback would receive an undefined where a number should have been.
+ * Providing these specific overloads ensures that the number of userdata parameters must match
+ *  the number of userdata parameters accepted by the callback.
+ * At this point you may be wondering: Why not just use a single '...args' signature?
+ * Because spread, args arrays, etc all have significant JS runtime overhead! :-)
+ * The underlying implementation will always try and pass 3 userdata values, even if it only got
+ *  one value or the callback only wants one. This is fine, because the JS runtime will discard
+ *  any extra parameters that the caller doesn't want.
+ */
+declare function mono_wasm_with_hazard_buffer<TFunc extends (buffer: WasmRootBuffer) => any>(num_elements: number, func: TFunc): ReturnType<TFunc>;
+declare function mono_wasm_with_hazard_buffer<TFunc extends (buffer: WasmRootBuffer, userdata1: any) => any>(num_elements: number, func: TFunc, userdata1: Parameters<TFunc>[1]): ReturnType<TFunc>;
+declare function mono_wasm_with_hazard_buffer<TFunc extends (buffer: WasmRootBuffer, userdata1: any, userdata2: any) => any>(num_elements: number, func: TFunc, userdata1: Parameters<TFunc>[1], userdata2: Parameters<TFunc>[2]): ReturnType<TFunc>;
+declare function mono_wasm_with_hazard_buffer<TFunc extends (buffer: WasmRootBuffer, userdata1: any, userdata2: any, userdata3: any) => any>(num_elements: number, func: TFunc, userdata1: Parameters<TFunc>[1], userdata2: Parameters<TFunc>[2], userdata3: Parameters<TFunc>[3]): ReturnType<TFunc>;
+/**
+ * Pins the object pointed to by root and then invokes func(obj, userdata).
+ * Until func returns, the object is guaranteed to not move or be collected by the GC.
+ */
+declare function mono_wasm_with_pinned_object<T extends MonoObject, TFunc extends (ptr: T, userdata?: any) => any>(root: WasmRoot<T>, func: TFunc, userdata?: Parameters<TFunc>[1]): ReturnType<TFunc>;
+declare const enum WasmRootBufferType {
+    Owned = 0,
+    External = 1,
+    Stack = 2
+}
 declare class WasmRootBuffer {
     private __count;
-    private length;
     private __offset;
     private __offset32;
-    private __handle;
-    private __ownsAllocation;
-    constructor(offset: VoidPtr, capacity: number, ownsAllocation: boolean, name?: string);
+    private __type;
+    constructor(offset: MonoObjectRef, capacity: number, type: WasmRootBufferType, name?: string);
+    get length(): number;
+    _unsafe_change_address(offset: MonoObjectRef, capacity: number): void;
     _throw_index_out_of_range(): void;
     _check_in_range(index: number): void;
     get_address(index: number): MonoObjectRef;
     get_address_32(index: number): number;
-    get(index: number): ManagedPointer;
-    set(index: number, value: ManagedPointer): ManagedPointer;
+    get(index: number): MonoObject;
+    set(index: number, value: MonoObject): MonoObject;
     copy_value_from_address(index: number, sourceAddress: MonoObjectRef): void;
     _unsafe_get(index: number): number;
     _unsafe_set(index: number, value: ManagedPointer | NativePointer): void;
@@ -328,6 +356,11 @@ declare function unbox_mono_obj(mono_obj: MonoObject): any;
 declare function unbox_mono_obj_root(root: WasmRoot<any>): any;
 declare function mono_array_to_js_array(mono_array: MonoArray): any[] | null;
 declare function mono_array_root_to_js_array(arrayRoot: WasmRoot<MonoArray>): any[] | null;
+declare function mono_primitive_array_to_js_typed_array_ref<T extends ArrayBufferView>(type: {
+    new (length: number): T;
+    new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
+    BYTES_PER_ELEMENT: number;
+}, array: MonoObjectRef, copy?: boolean, coerce?: boolean): T;
 
 declare function mono_bind_static_method(fqn: string, signature?: string): Function;
 declare function mono_call_assembly_entry_point(assembly: string, args?: any[], signature?: string): number;
@@ -388,8 +421,14 @@ declare const MONO: {
     mono_wasm_new_root: typeof mono_wasm_new_root;
     mono_wasm_new_external_root: typeof mono_wasm_new_external_root;
     mono_wasm_release_roots: typeof mono_wasm_release_roots;
+    mono_wasm_with_hazard_buffer: typeof mono_wasm_with_hazard_buffer;
+    mono_wasm_with_pinned_object: typeof mono_wasm_with_pinned_object;
     mono_run_main: typeof mono_run_main;
     mono_run_main_and_exit: typeof mono_run_main_and_exit;
+    mono_wasm_memcpy_from_managed_object: (destination: VoidPtr, destination_offset: number, destination_size_bytes: number, source_object: MonoObjectRef, source_offset: number, count_bytes: number) => void;
+    mono_wasm_get_object_field_i32: (source_object: MonoObjectRef, source_offset: number) => number;
+    mono_wasm_get_object_field_f64: (source_object: MonoObjectRef, source_offset: number) => number;
+    mono_wasm_copy_managed_pointer_from_field: (destination: MonoObjectRef, source_object: MonoObjectRef, field_offset: number) => void;
     mono_wasm_add_assembly: (name: string, data: VoidPtr, size: number) => number;
     mono_wasm_load_runtime: (unused: string, debug_level: number) => void;
     config: MonoConfig | MonoConfigError;
@@ -466,6 +505,16 @@ declare const BINDING: {
     conv_string_root: typeof conv_string_root;
     unbox_mono_obj_root: typeof unbox_mono_obj_root;
     mono_array_root_to_js_array: typeof mono_array_root_to_js_array;
+    /**
+     * Creates a JavaScript TypedArray of a given type from the contents of a managed array.
+     * @param type: The JS array type to construct (i.e. Uint8Array)
+     * @param array: The address-of-address of the managed array, i.e. root.address
+     * @param coerce: If true, the JS array type does not need to match the managed element type.
+     * @param copy: If false, a view over the managed array's heap elements will be returned instead of a copy.
+     *  You are responsible for keeping the array pinned until you are done with the view and you must ensure
+     *   that the native heap does not resize until you are done with the view.
+     */
+    mono_primitive_array_to_js_typed_array_ref: typeof mono_primitive_array_to_js_typed_array_ref;
     bind_static_method: typeof mono_bind_static_method;
     call_assembly_entry_point: typeof mono_call_assembly_entry_point;
 };

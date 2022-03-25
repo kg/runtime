@@ -95,18 +95,19 @@ namespace System.Runtime.InteropServices.JavaScript
             FIRST = BUFFER_TOO_SMALL
         }
 
-        public static string GetCallSignatureRef(IntPtr _methodHandle, in object? objForRuntimeType)
+        public static void GetCallSignatureRef(IntPtr _methodHandle, in object? objForRuntimeType, out string resultString)
         {
+            resultString = string.Empty;
             var methodHandle = GetMethodHandleFromIntPtr(_methodHandle);
 
             MethodBase? mb = objForRuntimeType is null ? MethodBase.GetMethodFromHandle(methodHandle) : MethodBase.GetMethodFromHandle(methodHandle, Type.GetTypeHandle(objForRuntimeType));
             if (mb is null)
-                return string.Empty;
+                return;
 
             ParameterInfo[] parms = mb.GetParameters();
             int parmsLength = parms.Length;
             if (parmsLength == 0)
-                return string.Empty;
+                return;
 
             var result = new char[parmsLength];
             for (int i = 0; i < parmsLength; i++)
@@ -116,7 +117,7 @@ namespace System.Runtime.InteropServices.JavaScript
                 result[i] = GetCallSignatureCharacterForMarshalType(mt, null);
             }
 
-            return new string(result);
+            resultString = new string(result);
         }
 
         private static RuntimeMethodHandle GetMethodHandleFromIntPtr(IntPtr ptr)
