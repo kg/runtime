@@ -8596,7 +8596,10 @@ mono_jiterp_check_pending_unwind (ThreadContext *context)
 MONO_ALWAYS_INLINE void *
 mono_jiterp_get_context (void)
 {
-	return get_context ();
+	ThreadContext *context = (ThreadContext *) mono_native_tls_get_value (thread_context_id);
+	if (G_UNLIKELY(!context))
+		context = get_context ();
+	return context;
 }
 
 MONO_ALWAYS_INLINE gpointer
@@ -8665,11 +8668,16 @@ mono_jiterp_interp_entry (JiterpEntryData *_data, stackval *sp_args, void *res)
 		mono_jiterp_stackval_to_data (type, frame.stack, res);
 }
 
-EMSCRIPTEN_KEEPALIVE void
-mono_jiterp_auto_safepoint (InterpFrame *frame, guint16 *ip)
+EMSCRIPTEN_KEEPALIVE volatile size_t *
+mono_jiterp_get_polling_required_flag_address ()
 {
-	if (G_UNLIKELY (mono_polling_required))
-		do_safepoint (frame, get_context(), ip);
+	return &mono_polling_required;
+}
+
+EMSCRIPTEN_KEEPALIVE void
+mono_jiterp_do_safepoint (InterpFrame *frame, guint16 *ip)
+{
+	do_safepoint (frame, get_context(), ip);
 }
 
 #endif

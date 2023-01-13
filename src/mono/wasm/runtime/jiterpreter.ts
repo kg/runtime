@@ -251,7 +251,7 @@ function getTraceImports () {
         ["ldtsflda", "ldtsflda", getRawCwrap("mono_jiterp_ldtsflda")],
         ["conv_ovf", "conv_ovf", getRawCwrap("mono_jiterp_conv_ovf")],
         ["relop_fp", "relop_fp", getRawCwrap("mono_jiterp_relop_fp")],
-        ["safepoint", "safepoint", getRawCwrap("mono_jiterp_auto_safepoint")],
+        ["safepoint", "safepoint", getRawCwrap("mono_jiterp_do_safepoint")],
         ["hashcode", "hashcode", getRawCwrap("mono_jiterp_get_hashcode")],
         ["hascsize", "hascsize", getRawCwrap("mono_jiterp_object_has_component_size")],
     ];
@@ -3021,10 +3021,25 @@ function append_bailout (builder: WasmBuilder, ip: MintOpcodePtr, reason: Bailou
 }
 
 function append_safepoint (builder: WasmBuilder, ip: MintOpcodePtr) {
+    // FIXME: While this is more efficient, it is MUCH bigger, like 16 extra bytes per safepoint
+    // It may be best to have the safepoint function do the check instead even if it's slightly
+    //  slower since it would make traces smaller
+    builder.block();
+    // Load and check the safepoint required flag
+    const ptr = cwraps.mono_jiterp_get_polling_required_flag_address();
+    builder.ptr_const(ptr);
+    builder.appendU8(WasmOpcode.i32_load);
+    builder.appendMemarg(0, 2);
+    builder.appendU8(WasmOpcode.i32_eqz);
+    // If it's not set, branch past the safepoint
+    builder.appendU8(WasmOpcode.br_if);
+    builder.appendLeb(0);
+    // The flag was set so perform a safepoint
     builder.local("frame");
     // Not ip_const, because we can't pass relative IP to do_safepoint
     builder.i32_const(ip);
     builder.callImport("safepoint");
+    builder.endBlock();
 }
 
 const JITERPRETER_TRAINING = 0;

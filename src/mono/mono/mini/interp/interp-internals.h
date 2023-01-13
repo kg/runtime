@@ -305,10 +305,10 @@ mono_interp_error_cleanup (MonoError *error);
 gboolean
 mono_jiterp_isinst (MonoObject* object, MonoClass* klass);
 
-void
+MONO_ALWAYS_INLINE void
 mono_jiterp_check_pending_unwind (ThreadContext *context);
 
-void *
+MONO_ALWAYS_INLINE void *
 mono_jiterp_get_context (void);
 
 int
@@ -320,13 +320,13 @@ mono_jiterp_overflow_check_u4 (guint32 lhs, guint32 rhs, int opcode);
 void
 mono_jiterp_ld_delegate_method_ptr (gpointer *destination, MonoDelegate **source);
 
-int
+MONO_ALWAYS_INLINE int
 mono_jiterp_stackval_to_data (MonoType *type, stackval *val, void *data);
 
-int
+MONO_ALWAYS_INLINE int
 mono_jiterp_stackval_from_data (MonoType *type, stackval *result, const void *data);
 
-gpointer
+MONO_ALWAYS_INLINE gpointer
 mono_jiterp_frame_data_allocator_alloc (FrameDataAllocator *stack, InterpFrame *frame, int size);
 
 #endif
