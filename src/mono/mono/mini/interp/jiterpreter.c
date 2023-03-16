@@ -1384,7 +1384,8 @@ mono_jiterp_monitor_trace (const guint16 *ip, void *_frame, void *locals)
 			// g_print("trace #%d @%d '%s' accepted; average_opcodes %f >= %f\n", index, ip, frame->imethod->method->name, average_opcodes, threshold);
 		} else {
 			traces_rejected++;
-			g_print("trace #%d @%d '%s' rejected; average_opcodes %f < %f\n", index, ip, frame->imethod->method->name, average_opcodes, threshold);
+			if (mono_opt_jiterpreter_stats_enabled)
+				g_print("trace #%d @%d '%s' rejected; average_opcodes %f < %f\n", index, ip, frame->imethod->method->name, average_opcodes, threshold);
 		}
 	}
 
