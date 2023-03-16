@@ -1089,6 +1089,17 @@ class Cfg {
                             const disp = this.dispatchTable.get(segment.target)!;
                             if (this.trace)
                                 console.log(`backward br from ${segment.from} to ${segment.target}: disp=${disp}`);
+
+                            // set the backward branch taken flag in the cinfo so that the monitoring phase
+                            //  knows we took a backward branch. this is unfortunate but unavoidable overhead
+                            // we just make it a flag instead of an increment to reduce the cost
+                            this.builder.local("cinfo");
+                            // TODO: Store the offset in opcodes instead? Probably not useful information
+                            this.builder.i32_const(1);
+                            this.builder.appendU8(WasmOpcode.i32_store);
+                            this.builder.appendMemarg(0, 0); // JiterpreterCallInfo.backward_branch_taken
+
+                            // set the dispatch index for the br_table
                             this.builder.i32_const(disp);
                             this.builder.local("disp", WasmOpcode.set_local);
                         } else {
@@ -1174,6 +1185,24 @@ export const _now = (globalThis.performance && globalThis.performance.now)
 let scratchBuffer : NativePointer = <any>0;
 
 export function append_bailout (builder: WasmBuilder, ip: MintOpcodePtr, reason: BailoutReason) {
+    builder.ip_const(ip);
+    if (builder.options.countBailouts) {
+        builder.i32_const(reason);
+        builder.callImport("bailout");
+    }
+    builder.appendU8(WasmOpcode.return_);
+}
+
+// generate a bailout that is recorded for the monitoring phase as a possible early exit.
+export function append_exit (builder: WasmBuilder, ip: MintOpcodePtr, opcode_counter: number, reason: BailoutReason) {
+    // TODO: Don't generate this recording code for stuff further into the trace body,
+    //  since it isn't likely to contribute to the trace being rejected
+    if (opcode_counter <= (builder.options.averageOpcodesThreshold + 8)) {
+        builder.local("cinfo");
+        builder.i32_const(opcode_counter);
+        builder.appendU8(WasmOpcode.i32_store);
+        builder.appendMemarg(4, 0); // bailout_opcode_count
+    }
     builder.ip_const(ip);
     if (builder.options.countBailouts) {
         builder.i32_const(reason);
@@ -1456,6 +1485,7 @@ export type JiterpreterOptions = {
     eliminateNullChecks: boolean;
     minimumTraceLength: number;
     minimumTraceHitCount: number;
+    averageOpcodesThreshold: number;
     jitCallHitCount: number;
     jitCallFlushThreshold: number;
     interpEntryHitCount: number;
@@ -1482,6 +1512,7 @@ const optionNames : { [jsName: string] : string } = {
     "directJitCalls": "jiterpreter-direct-jit-calls",
     "minimumTraceLength": "jiterpreter-minimum-trace-length",
     "minimumTraceHitCount": "jiterpreter-minimum-trace-hit-count",
+    "averageOpcodesThreshold": "jiterpreter-trace-average-opcodes-threshold",
     "jitCallHitCount": "jiterpreter-jit-call-hit-count",
     "jitCallFlushThreshold": "jiterpreter-jit-call-queue-flush-threshold",
     "interpEntryHitCount": "jiterpreter-interp-entry-hit-count",

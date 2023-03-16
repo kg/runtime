@@ -322,7 +322,8 @@ function initialize_builder (builder: WasmBuilder) {
     builder.defineType(
         "trace", {
             "frame": WasmValtype.i32,
-            "pLocals": WasmValtype.i32
+            "pLocals": WasmValtype.i32,
+            "cinfo": WasmValtype.i32,
         }, WasmValtype.i32, true
     );
     builder.defineType(
@@ -565,6 +566,7 @@ function initialize_builder (builder: WasmBuilder) {
             "trace": WasmValtype.i32,
             "frame": WasmValtype.i32,
             "locals": WasmValtype.i32,
+            "cinfo": WasmValtype.i32,
         }, WasmValtype.i32, true
     );
     builder.defineType(

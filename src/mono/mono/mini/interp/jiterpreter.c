@@ -864,7 +864,7 @@ typedef struct {
 	gint64 hit_count;
 	JiterpreterThunk thunk;
 	int size_of_trace;
-	gint32 total_distance;
+	gint32 total_opcodes;
 } TraceInfo;
 
 // If a trace exits with an exterior backward branch, treat its distance as this value
@@ -1233,7 +1233,7 @@ mono_jiterp_stelem_ref (
 
 EMSCRIPTEN_KEEPALIVE int
 mono_jiterp_trace_transfer (
-	int displacement, JiterpreterThunk trace, void *frame, void *pLocals
+	int displacement, JiterpreterThunk trace, void *frame, void *pLocals, JiterpreterCallInfo *cinfo
 ) {
 	// This indicates that we lost a race condition, so there's no trace to call. Just bail out.
 	// FIXME: Detect this at trace generation time and spin until the trace is available
@@ -1245,7 +1245,7 @@ mono_jiterp_trace_transfer (
 	//  safepoint was already performed by the trace.
 	int relative_displacement = 0;
 	while (relative_displacement == 0)
-		relative_displacement = trace(frame, pLocals);
+		relative_displacement = trace(frame, pLocals, cinfo);
 
 	// We got a relative displacement other than 0, so the trace bailed out somewhere or
 	//  branched to another branch target. Time to return (and our caller will return too.)
@@ -1324,7 +1324,7 @@ mono_jiterp_write_number_unaligned (void *dest, double value, int mode) {
 }
 
 ptrdiff_t
-mono_jiterp_monitor_trace (const guint16 *ip, void *frame, void *locals)
+mono_jiterp_monitor_trace (const guint16 *ip, void *_frame, void *locals)
 {
 	gint32 index = READ32(ip + 1);
 	TraceInfo *info = trace_info_get(index);
@@ -1334,17 +1334,33 @@ mono_jiterp_monitor_trace (const guint16 *ip, void *frame, void *locals)
 	// FIXME: This shouldn't be possible
 	if (((guint32)(void *)thunk) <= JITERPRETER_NOT_JITTED)
 		return 6;
-	ptrdiff_t result = thunk(frame, locals);
+
+	JiterpreterCallInfo cinfo;
+	cinfo.backward_branch_taken = 0;
+	cinfo.bailout_opcode_count = -1;
+
+	ptrdiff_t result = thunk(_frame, locals, &cinfo);
+	// If a backward branch was taken, we can treat the trace as if it successfully
+	//  executed at least one time. We don't know how long it actually ran, but back
+	//  branches are almost always going to be loops. It's fine if a bailout happens
+	//  after multiple loop iterations.
+	gint32 effective_distance = MIN(info->size_of_trace / 2, 64),
+		effective_opcode_count = cinfo.backward_branch_taken || (cinfo.bailout_opcode_count == -1)
+			? effective_distance // FIXME
+			: cinfo.bailout_opcode_count;
+
+	InterpFrame *frame = _frame;
+
+	/*
+	if (cinfo.bailout_opcode_count >= 0)
+		g_print("trace #%d @%d '%s' bailout recorded at opcode #%d\n", index, ip, frame->imethod->method->name, cinfo.bailout_opcode_count);
+	*/
+
 	// Maintain an approximate sum of how far trace execution has advanced over
 	//  the monitoring period, so we can evaluate its average later and decide
 	//  whether to keep the trace
 	// Note that a result of 0 means that a loop back-branched to itself.
-	info->total_distance += result <= 0
-		? TRACE_NEGATIVE_DISTANCE
-		: (result > TRACE_DISTANCE_LIMIT
-			? TRACE_DISTANCE_LIMIT
-			: result
-		);
+	info->total_opcodes += effective_opcode_count;
 
 	gint64 hit_count = info->hit_count++ - mono_opt_jiterpreter_minimum_trace_hit_count;
 	if (hit_count == mono_opt_jiterpreter_trace_monitoring_period) {
@@ -1353,21 +1369,22 @@ mono_jiterp_monitor_trace (const guint16 *ip, void *frame, void *locals)
 		*mutable_ip = MINT_TIER_NOP_JITERPRETER;
 
 		mono_memory_barrier ();
-		gint64 average_distance = info->total_distance / hit_count;
-		gint64 threshold = mono_opt_jiterpreter_trace_average_distance_threshold,
-			low_threshold = info->size_of_trace / 2;
+		double average_opcodes = info->total_opcodes / (double)hit_count;
+		double threshold = mono_opt_jiterpreter_trace_average_opcodes_threshold,
+			low_threshold = info->size_of_trace / 3.0; // FIXME
 		// Don't reject short traces as long as they run mostly to the end, we already
 		//  decided previously that they are worth keeping for some reason
 		if (low_threshold < threshold)
 			threshold = low_threshold;
 
-		if (average_distance >= threshold) {
+		if (average_opcodes >= threshold) {
 			*(volatile JiterpreterThunk*)(ip + 1) = thunk;
 			mono_memory_barrier ();
 			*mutable_ip = MINT_TIER_ENTER_JITERPRETER;
+			// g_print("trace #%d @%d '%s' accepted; average_opcodes %f >= %f\n", index, ip, frame->imethod->method->name, average_opcodes, threshold);
 		} else {
 			traces_rejected++;
-			// g_print("trace #%d @%d rejected; average_distance==%d\n", index, ip, average_distance);
+			g_print("trace #%d @%d '%s' rejected; average_opcodes %f < %f\n", index, ip, frame->imethod->method->name, average_opcodes, threshold);
 		}
 	}
 
