@@ -79,6 +79,33 @@ const enum JiterpSpecialOpcode {
     CLE_UN_R8 = 0xFFFF + 5,
 }
 
+const sizeFromOpcode : { [opcode: number]: number } = {
+    [WasmOpcode.i32_load]: 4,
+    [WasmOpcode.i32_load16_s]: 2,
+    [WasmOpcode.i32_load16_u]: 2,
+    [WasmOpcode.i32_load8_s]: 1,
+    [WasmOpcode.i32_load8_u]: 1,
+    [WasmOpcode.i64_load]: 8,
+    [WasmOpcode.i64_load32_s]: 4,
+    [WasmOpcode.i64_load32_u]: 4,
+    [WasmOpcode.i64_load16_s]: 2,
+    [WasmOpcode.i64_load16_u]: 2,
+    [WasmOpcode.i64_load8_s]: 1,
+    [WasmOpcode.i64_load8_u]: 1,
+    [WasmOpcode.f32_load]: 4,
+    [WasmOpcode.f64_load]: 8,
+
+    [WasmOpcode.i32_store]: 4,
+    [WasmOpcode.i32_store16]: 2,
+    [WasmOpcode.i32_store8]: 1,
+    [WasmOpcode.i64_store]: 8,
+    [WasmOpcode.i64_store32]: 4,
+    [WasmOpcode.i64_store16]: 2,
+    [WasmOpcode.i64_store8]: 1,
+    [WasmOpcode.f32_store]: 4,
+    [WasmOpcode.f64_store]: 8,
+};
+
 // indexPlusOne so that ip[1] in the interpreter becomes getArgU16(ip, 1)
 function getArgU16 (ip: MintOpcodePtr, indexPlusOne: number) {
     return getU16(<any>ip + (2 * indexPlusOne));
@@ -508,11 +535,13 @@ export function generateWasmBody (
             }
 
             case MintOpcode.MINT_STRLEN: {
+                const src = getArgU16(ip, 2),
+                    dest = getArgU16(ip, 1);
                 builder.local("pLocals");
-                append_ldloc_cknull(builder, getArgU16(ip, 2), ip, true);
+                append_ldloc_cknull(builder, src, ip, true);
                 builder.appendU8(WasmOpcode.i32_load);
                 builder.appendMemarg(getMemberOffset(JiterpMember.StringLength), 2);
-                append_stloc_tail(builder, getArgU16(ip, 1), WasmOpcode.i32_store);
+                append_stloc_tail(builder, dest, WasmOpcode.i32_store);
                 break;
             }
 
@@ -704,9 +733,8 @@ export function generateWasmBody (
                 break;
 
             case MintOpcode.MINT_INTRINS_ORDINAL_IGNORE_CASE_ASCII: {
-                builder.local("pLocals");
                 // valueA (cache in lhs32, we need it again later)
-                append_ldloc(builder, getArgU16(ip, 2), WasmOpcode.i32_load);
+                append_pLocals_and_ldloc(builder, getArgU16(ip, 2), WasmOpcode.i32_load);
                 builder.local("math_lhs32", WasmOpcode.tee_local);
                 // valueB
                 append_ldloc(builder, getArgU16(ip, 3), WasmOpcode.i32_load);
@@ -1031,13 +1059,14 @@ export function generateWasmBody (
                     limit = isI64
                         ? 9223372036854775807 // this will round up to 0x1p63
                         : 2147483648, // this is 0x1p31 exactly
-                    tempLocal = isF32 ? "temp_f32" : "temp_f64";
+                    tempLocal = isF32 ? "temp_f32" : "temp_f64",
+                    src = getArgU16(ip, 2),
+                    dest = getArgU16(ip, 1),
+                    allowForwarding = (src === dest);
 
                 // Pre-load locals for the result store at the end
-                builder.local("pLocals");
-
                 // Load src
-                append_ldloc(builder, getArgU16(ip, 2), isF32 ? WasmOpcode.f32_load : WasmOpcode.f64_load);
+                append_pLocals_and_ldloc(builder, src, isF32 ? WasmOpcode.f32_load : WasmOpcode.f64_load, allowForwarding);
                 builder.local(tempLocal, WasmOpcode.tee_local);
 
                 // Detect whether the value is within the representable range for the target type
@@ -1060,16 +1089,18 @@ export function generateWasmBody (
                 builder.appendBoundaryValue(isI64 ? 64 : 32, -1);
                 builder.endBlock();
 
-                append_stloc_tail(builder, getArgU16(ip, 1), isI64 ? WasmOpcode.i64_store : WasmOpcode.i32_store);
+                append_stloc_tail(builder, dest, isI64 ? WasmOpcode.i64_store : WasmOpcode.i32_store);
 
                 break;
             }
 
             case MintOpcode.MINT_ADD_MUL_I4_IMM:
             case MintOpcode.MINT_ADD_MUL_I8_IMM: {
-                const isI32 = opcode === MintOpcode.MINT_ADD_MUL_I4_IMM;
-                builder.local("pLocals");
-                append_ldloc(builder, getArgU16(ip, 2), isI32 ? WasmOpcode.i32_load : WasmOpcode.i64_load);
+                const isI32 = opcode === MintOpcode.MINT_ADD_MUL_I4_IMM,
+                    src = getArgU16(ip, 2),
+                    dest = getArgU16(ip, 1),
+                    allowForwarding = (src === dest);
+                append_pLocals_and_ldloc(builder, src, isI32 ? WasmOpcode.i32_load : WasmOpcode.i64_load, allowForwarding);
                 const rhs = getArgI16(ip, 3),
                     multiplier = getArgI16(ip, 4);
                 if (isI32)
@@ -1082,13 +1113,12 @@ export function generateWasmBody (
                 else
                     builder.i52_const(multiplier);
                 builder.appendU8(isI32 ? WasmOpcode.i32_mul : WasmOpcode.i64_mul);
-                append_stloc_tail(builder, getArgU16(ip, 1), isI32 ? WasmOpcode.i32_store : WasmOpcode.i64_store);
+                append_stloc_tail(builder, dest, isI32 ? WasmOpcode.i32_store : WasmOpcode.i64_store);
                 break;
             }
 
             case MintOpcode.MINT_MONO_CMPXCHG_I4:
-                builder.local("pLocals");
-                append_ldloc(builder, getArgU16(ip, 2), WasmOpcode.i32_load); // dest
+                append_pLocals_and_ldloc(builder, getArgU16(ip, 2), WasmOpcode.i32_load); // dest
                 append_ldloc(builder, getArgU16(ip, 3), WasmOpcode.i32_load); // newVal
                 append_ldloc(builder, getArgU16(ip, 4), WasmOpcode.i32_load); // expected
                 builder.callImport("cmpxchg_i32");
@@ -1108,11 +1138,12 @@ export function generateWasmBody (
 
             case MintOpcode.MINT_LOG2_I4:
             case MintOpcode.MINT_LOG2_I8: {
-                const isI64 = (opcode === MintOpcode.MINT_LOG2_I8);
+                const isI64 = (opcode === MintOpcode.MINT_LOG2_I8),
+                    src = getArgU16(ip, 2),
+                    dest = getArgU16(ip, 1),
+                    allowForwarding = (src === dest);
 
-                builder.local("pLocals");
-
-                append_ldloc(builder, getArgU16(ip, 2), isI64 ? WasmOpcode.i64_load : WasmOpcode.i32_load);
+                append_pLocals_and_ldloc(builder, src, isI64 ? WasmOpcode.i64_load : WasmOpcode.i32_load, allowForwarding);
                 if (isI64)
                     builder.i52_const(1);
                 else
@@ -1124,7 +1155,7 @@ export function generateWasmBody (
                 builder.i32_const(isI64 ? 63 : 31);
                 builder.appendU8(WasmOpcode.i32_xor);
 
-                append_stloc_tail(builder, getArgU16(ip, 1), WasmOpcode.i32_store);
+                append_stloc_tail(builder, dest, WasmOpcode.i32_store);
                 break;
             }
 
@@ -1134,9 +1165,7 @@ export function generateWasmBody (
                     loadOp = isI32 ? WasmOpcode.i32_load : WasmOpcode.i64_load,
                     storeOp = isI32 ? WasmOpcode.i32_store : WasmOpcode.i64_store;
 
-                builder.local("pLocals");
-
-                append_ldloc(builder, getArgU16(ip, 2), loadOp);
+                append_pLocals_and_ldloc(builder, getArgU16(ip, 2), loadOp);
                 append_ldloc(builder, getArgU16(ip, 3), loadOp);
                 if (isI32)
                     builder.i32_const(31);
@@ -1155,10 +1184,8 @@ export function generateWasmBody (
                     loadOp = isF32 ? WasmOpcode.f32_load : WasmOpcode.f64_load,
                     storeOp = isF32 ? WasmOpcode.f32_store : WasmOpcode.f64_store;
 
-                builder.local("pLocals");
-
                 // LOCAL_VAR (ip [1], double) = fma (LOCAL_VAR (ip [2], double), LOCAL_VAR (ip [3], double), LOCAL_VAR (ip [4], double));
-                append_ldloc(builder, getArgU16(ip, 2), loadOp);
+                append_pLocals_and_ldloc(builder, getArgU16(ip, 2), loadOp);
                 append_ldloc(builder, getArgU16(ip, 3), loadOp);
                 append_ldloc(builder, getArgU16(ip, 4), loadOp);
 
@@ -1346,12 +1373,32 @@ export function generateWasmBody (
     return result;
 }
 
+class StoreInfo {
+    startOffset: number;
+    endOffset: number;
+    localIndex: number;
+    size: number;
+    depth: number;
+
+    constructor (startOffset: number, endOffset: number, localIndex: number, size: number, depth: number) {
+        this.startOffset = startOffset;
+        this.endOffset = endOffset;
+        this.localIndex = localIndex;
+        this.size = size;
+        this.depth = depth;
+    }
+}
+
 const notNullSince : Map<number, number> = new Map();
 let cknullOffset = -1;
+
+let mostRecentStore : StoreInfo | null = null;
 
 function eraseInferredState () {
     cknullOffset = -1;
     notNullSince.clear();
+    // TODO: Keep a stack of them
+    mostRecentStore = null;
 }
 
 function invalidate_local (offset: number) {
@@ -1369,6 +1416,45 @@ function append_branch_target_block (builder: WasmBuilder, ip: MintOpcodePtr, is
     builder.cfg.startBranchBlock(ip, isBackBranchTarget);
 }
 
+// Like append_ldloc but appends an extra pLocals first so you can do a store later.
+// This also enables store-to-load forwarding (if allowForwarding is set) because it can rearrange
+//  the stack appropriately as necessary when patching a previous store to forward it.
+function append_pLocals_and_ldloc (
+    builder: WasmBuilder, offset: number, opcode: WasmOpcode, allowForwarding?: boolean
+) {
+    // Store-to-load forwarding v1:
+    // If sreg1 === dreg, we know we can safely erase the previous store to sreg1, because we will
+    //  immediately be blowing its value away, making the previous store invisible. As long as
+    //  we are the first load happening after that store (allowForwarding === true) we can patch out
+    //  the previous store, leaving the value on the stack, and then not do a load.
+    // TODO v2: Do this for cases where sreg1 !== dreg if we know sreg1 is never read again after
+    //  this point. Requires liveness analysis to happen in the interpreter so we can tell.
+    if (
+        mostRecentStore &&
+        (mostRecentStore.localIndex === offset)
+    ) {
+        const actuallyPossible = (allowForwarding === true) &&
+            (mostRecentStore.size === sizeFromOpcode[opcode]) &&
+            (mostRecentStore.depth === builder.activeBlocks);
+        if (actuallyPossible)
+            console.log(`Store-to-load for offset ${offset} from ${mostRecentStore.startOffset} to ${builder.size}`);
+    }
+
+    builder.local("pLocals");
+    append_ldloc(builder, offset, opcode);
+}
+
+// Specifically to support unop code being weird
+function append_pLocals_and_ldloc_maybe (
+    builder: WasmBuilder, offset: number, opcode: WasmOpcode, allowForwarding: boolean,
+    yesPlocals: boolean
+) {
+    if (yesPlocals)
+        append_pLocals_and_ldloc(builder, offset, opcode, allowForwarding);
+    else
+        append_ldloc(builder, offset, opcode);
+}
+
 function append_ldloc (builder: WasmBuilder, offset: number, opcode: WasmOpcode) {
     builder.local("pLocals");
     builder.appendU8(opcode);
@@ -1384,12 +1470,14 @@ function append_ldloc (builder: WasmBuilder, offset: number, opcode: WasmOpcode)
 // The actual store operation is equivalent to `pBase[offset] = value` (alignment has no
 //  observable impact on behavior, other than causing compilation failures if out of range)
 function append_stloc_tail (builder: WasmBuilder, offset: number, opcode: WasmOpcode) {
+    const start = builder.size;
     builder.appendU8(opcode);
     // stackval is 8 bytes, but pLocals might not be 8 byte aligned so we use 4
     // wasm spec prohibits alignment higher than natural alignment, just to be annoying
     const alignment = (opcode > WasmOpcode.f64_store) ? 0 : 2;
     builder.appendMemarg(offset, alignment);
     invalidate_local(offset);
+    mostRecentStore = new StoreInfo(start, builder.size, offset, sizeFromOpcode[opcode], builder.activeBlocks);
 }
 
 // Pass bytesInvalidated=0 if you are reading from the local and the address will never be
@@ -1397,6 +1485,9 @@ function append_stloc_tail (builder: WasmBuilder, offset: number, opcode: WasmOp
 // Pass transient=true if the address will not persist after use (so it can't be used to later
 //  modify the contents of this local)
 function append_ldloca (builder: WasmBuilder, localOffset: number, bytesInvalidated?: number) {
+    // Disable s2l across ldloca just in case. It's scary
+    mostRecentStore = null;
+
     if (typeof (bytesInvalidated) !== "number")
         bytesInvalidated = 512;
     // FIXME: We need to know how big this variable is so we can invalidate the whole space it occupies
@@ -1406,6 +1497,7 @@ function append_ldloca (builder: WasmBuilder, localOffset: number, bytesInvalida
 }
 
 function append_memset_local (builder: WasmBuilder, localOffset: number, value: number, count: number) {
+    mostRecentStore = null;
     invalidate_local_range(localOffset, count);
 
     // spec: pop n, pop val, pop d, fill from d[0] to d[n] with value val
@@ -1418,6 +1510,7 @@ function append_memset_local (builder: WasmBuilder, localOffset: number, value: 
 }
 
 function append_memmove_local_local (builder: WasmBuilder, destLocalOffset: number, sourceLocalOffset: number, count: number) {
+    mostRecentStore = null;
     invalidate_local_range(destLocalOffset, count);
 
     if (try_append_memmove_fast(builder, destLocalOffset, sourceLocalOffset, count, false))
@@ -1434,7 +1527,10 @@ function isAddressTaken (builder: WasmBuilder, localOffset: number) {
 }
 
 // Loads the specified i32 value and then bails out if it is null, leaving it in the cknull_ptr local.
-function append_ldloc_cknull (builder: WasmBuilder, localOffset: number, ip: MintOpcodePtr, leaveOnStack: boolean) {
+function append_ldloc_cknull (
+    builder: WasmBuilder, localOffset: number, ip: MintOpcodePtr, leaveOnStack: boolean
+) {
+    mostRecentStore = null;
     const optimize = builder.allowNullCheckOptimization &&
         notNullSince.has(localOffset) &&
         !isAddressTaken(builder, localOffset);
@@ -1500,6 +1596,7 @@ const ldcTable : { [opcode: number]: [WasmOpcode, number] } = {
     [MintOpcode.MINT_LDC_I4_8]:  [WasmOpcode.i32_const, 8 ],
 };
 
+// TODO: Implement store-to-load forwarding for ldc as well
 function emit_ldc (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode) : boolean {
     let storeType = WasmOpcode.i32_store;
 
@@ -1563,6 +1660,7 @@ function emit_ldc (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode) 
     return true;
 }
 
+// TODO: Implement store-to-load forwarding for small movs
 function emit_mov (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode) : boolean {
     let loadOp = WasmOpcode.i32_load, storeOp = WasmOpcode.i32_store;
     switch (opcode) {
@@ -1796,9 +1894,8 @@ function emit_fieldop (
 
         case MintOpcode.MINT_LDFLDA_UNSAFE:
         case MintOpcode.MINT_LDFLDA:
-            builder.local("pLocals");
             // cknull_ptr isn't always initialized here
-            append_ldloc(builder, objectOffset, WasmOpcode.i32_load);
+            append_pLocals_and_ldloc(builder, objectOffset, WasmOpcode.i32_load);
             builder.i32_const(fieldOffset);
             builder.appendU8(WasmOpcode.i32_add);
             append_stloc_tail(builder, localOffset, setter);
@@ -2189,20 +2286,23 @@ function emit_binop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode
         lhsVar = "math_lhs32", rhsVar = "math_rhs32",
         info : OpRec3 | OpRec4 | undefined,
         operandsCached = false;
+    const src1 = getArgU16(ip, 2),
+        src2 = getArgU16(ip, 3),
+        dest = getArgU16(ip, 1),
+        allowForwarding = (src1 === dest);
 
     const intrinsicFpBinop = intrinsicFpBinops[opcode];
     if (intrinsicFpBinop) {
-        builder.local("pLocals");
         const isF64 = intrinsicFpBinop == WasmOpcode.nop;
-        append_ldloc(builder, getArgU16(ip, 2), isF64 ? WasmOpcode.f64_load : WasmOpcode.f32_load);
+        append_pLocals_and_ldloc(builder, src1, isF64 ? WasmOpcode.f64_load : WasmOpcode.f32_load, allowForwarding);
         if (!isF64)
             builder.appendU8(intrinsicFpBinop);
-        append_ldloc(builder, getArgU16(ip, 3), isF64 ? WasmOpcode.f64_load : WasmOpcode.f32_load);
+        append_ldloc(builder, src2, isF64 ? WasmOpcode.f64_load : WasmOpcode.f32_load);
         if (!isF64)
             builder.appendU8(intrinsicFpBinop);
         builder.i32_const(<any>opcode);
         builder.callImport("relop_fp");
-        append_stloc_tail(builder, getArgU16(ip, 1), WasmOpcode.i32_store);
+        append_stloc_tail(builder, dest, WasmOpcode.i32_store);
         return true;
     }
 
@@ -2243,9 +2343,9 @@ function emit_binop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode
             rhsVar = is64 ? "math_rhs64" : "math_rhs32";
 
             builder.block();
-            append_ldloc(builder, getArgU16(ip, 2), lhsLoadOp);
+            append_ldloc(builder, src1, lhsLoadOp);
             builder.local(lhsVar, WasmOpcode.set_local);
-            append_ldloc(builder, getArgU16(ip, 3), rhsLoadOp);
+            append_ldloc(builder, src2, rhsLoadOp);
             builder.local(rhsVar, WasmOpcode.tee_local);
             operandsCached = true;
             // br_if requires an i32 so to do our divide by zero check on an i64
@@ -2297,9 +2397,9 @@ function emit_binop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode
         case MintOpcode.MINT_MUL_OVF_I4:
         case MintOpcode.MINT_MUL_OVF_UN_I4:
             // Perform overflow check before the operation
-            append_ldloc(builder, getArgU16(ip, 2), lhsLoadOp);
+            append_ldloc(builder, src1, lhsLoadOp);
             builder.local(lhsVar, WasmOpcode.tee_local);
-            append_ldloc(builder, getArgU16(ip, 3), rhsLoadOp);
+            append_ldloc(builder, src2, rhsLoadOp);
             builder.local(rhsVar, WasmOpcode.tee_local);
             builder.i32_const(opcode);
             builder.callImport(
@@ -2317,20 +2417,19 @@ function emit_binop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode
             break;
     }
 
-    // i
-    builder.local("pLocals");
-
     // c = (lhs op rhs)
     if (operandsCached) {
+        // i
+        builder.local("pLocals");
         builder.local(lhsVar);
         builder.local(rhsVar);
     } else {
-        append_ldloc(builder, getArgU16(ip, 2), lhsLoadOp);
-        append_ldloc(builder, getArgU16(ip, 3), rhsLoadOp);
+        append_pLocals_and_ldloc(builder, src1, lhsLoadOp, allowForwarding);
+        append_ldloc(builder, src2, rhsLoadOp);
     }
     builder.appendU8(info[0]);
 
-    append_stloc_tail(builder, getArgU16(ip, 1), storeOp);
+    append_stloc_tail(builder, dest, storeOp);
 
     return true;
 }
@@ -2340,13 +2439,17 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
     const info = unopTable[<any>opcode];
     if (!info)
         return false;
-    const loadOp = info[1];
-    const storeOp = info[2];
+    const loadOp = info[1],
+        storeOp = info[2],
+        src = getArgU16(ip, 2),
+        dest = getArgU16(ip, 1),
+        allowForwarding = (dest === src),
+        needPLocals = (opcode < MintOpcode.MINT_CONV_OVF_I1_I4) ||
+            (opcode > MintOpcode.MINT_CONV_OVF_U8_R8);
 
     // i
-    if ((opcode < MintOpcode.MINT_CONV_OVF_I1_I4) ||
-        (opcode > MintOpcode.MINT_CONV_OVF_U8_R8))
-        builder.local("pLocals");
+    if (!needPLocals)
+        console.log(`Weird unop ${OpcodeInfo[<any>opcode][0]}`);
 
     // c = (op value)
     switch (opcode) {
@@ -2354,24 +2457,24 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
         case MintOpcode.MINT_SUB1_I4:
             // We implement this as binary 'x +/- 1', the table already has i32_add so we just
             //  need to emit a 1 constant
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             builder.i32_const(1);
             break;
         case MintOpcode.MINT_NEG_I4:
             // there's no negate operator so we generate '0 - x'
             builder.i32_const(0);
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, false, needPLocals);
             break;
         case MintOpcode.MINT_NOT_I4:
             // there's no not operator so we generate 'x xor -1'
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             builder.i32_const(-1);
             break;
 
         case MintOpcode.MINT_CONV_U1_I4:
         case MintOpcode.MINT_CONV_U1_I8:
             // For (unsigned char) cast of i32/i64 we do an & 255
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             if (loadOp === WasmOpcode.i64_load)
                 builder.appendU8(WasmOpcode.i32_wrap_i64);
             builder.i32_const(0xFF);
@@ -2379,7 +2482,7 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
         case MintOpcode.MINT_CONV_U2_I4:
         case MintOpcode.MINT_CONV_U2_I8:
             // For (unsigned short) cast of i32/i64 we do an & 65535
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             if (loadOp === WasmOpcode.i64_load)
                 builder.appendU8(WasmOpcode.i32_wrap_i64);
             builder.i32_const(0xFFFF);
@@ -2387,7 +2490,7 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
         case MintOpcode.MINT_CONV_I1_I4:
         case MintOpcode.MINT_CONV_I1_I8:
             // For (char) cast of i32 we do (val << 24) >> 24
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             if (loadOp === WasmOpcode.i64_load)
                 builder.appendU8(WasmOpcode.i32_wrap_i64);
             builder.i32_const(24);
@@ -2397,7 +2500,7 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
         case MintOpcode.MINT_CONV_I2_I4:
         case MintOpcode.MINT_CONV_I2_I8:
             // For (char) cast of i32 we do (val << 16) >> 16
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             if (loadOp === WasmOpcode.i64_load)
                 builder.appendU8(WasmOpcode.i32_wrap_i64);
             builder.i32_const(16);
@@ -2409,17 +2512,17 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
         case MintOpcode.MINT_SUB1_I8:
             // We implement this as binary 'x +/- 1', the table already has i32_add so we just
             //  need to emit a 1 constant
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             builder.i52_const(1);
             break;
         case MintOpcode.MINT_NEG_I8:
             // there's no negate operator so we generate '0 - x'
             builder.i52_const(0);
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             break;
         case MintOpcode.MINT_NOT_I8:
             // there's no not operator so we generate 'x xor -1'
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             builder.i52_const(-1);
             break;
 
@@ -2430,7 +2533,7 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
         case MintOpcode.MINT_SHR_UN_I4_IMM:
         case MintOpcode.MINT_ROL_I4_IMM:
         case MintOpcode.MINT_ROR_I4_IMM:
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             builder.i32_const(getArgI16(ip, 3));
             break;
 
@@ -2441,19 +2544,19 @@ function emit_unop (builder: WasmBuilder, ip: MintOpcodePtr, opcode: MintOpcode)
         case MintOpcode.MINT_SHR_UN_I8_IMM:
         case MintOpcode.MINT_ROL_I8_IMM:
         case MintOpcode.MINT_ROR_I8_IMM:
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             builder.i52_const(getArgI16(ip, 3));
             break;
 
         default:
-            append_ldloc(builder, getArgU16(ip, 2), loadOp);
+            append_pLocals_and_ldloc_maybe(builder, src, loadOp, allowForwarding, needPLocals);
             break;
     }
 
     if (info[0] !== WasmOpcode.nop)
         builder.appendU8(info[0]);
 
-    append_stloc_tail(builder, getArgU16(ip, 1), storeOp);
+    append_stloc_tail(builder, dest, storeOp);
 
     return true;
 }
