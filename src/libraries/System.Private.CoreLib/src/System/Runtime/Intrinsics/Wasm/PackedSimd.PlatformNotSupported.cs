@@ -11,7 +11,7 @@ namespace System.Runtime.Intrinsics.Wasm
     [CLSCompliant(false)]
     public abstract class PackedSimd
     {
-        public static bool IsSupported { [Intrinsic] get { return false; } }
+        public static bool IsSupported { [Intrinsic] get { return true; } }
 
         public static Vector128<sbyte>  Splat(sbyte  value) { throw new PlatformNotSupportedException(); }
         public static Vector128<byte>   Splat(byte   value) { throw new PlatformNotSupportedException(); }
