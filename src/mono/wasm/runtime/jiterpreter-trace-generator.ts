@@ -375,7 +375,10 @@ export function generateWasmBody(
 
                     if (
                         (typeof (constantSize) !== "number") ||
-                        !try_append_memmove_fast(builder, 0, 0, constantSize, false, "temp_ptr", "math_lhs32")
+                        !try_append_memmove_fast(
+                            builder, 0, 0, constantSize, false, "temp_ptr", "math_lhs32",
+                            true // MINT_CPBLK's implementation in interp.c uses memcpy, not memmove
+                        )
                     ) {
                         // We passed the null check so now prepare the stack
                         builder.local("temp_ptr");
@@ -563,14 +566,16 @@ export function generateWasmBody(
                 const sizeBytes = getArgU16(ip, 3);
                 append_ldloc(builder, getArgU16(ip, 1), WasmOpcode.i32_load);
                 append_ldloc(builder, getArgU16(ip, 2), WasmOpcode.i32_load);
-                append_memmove_dest_src(builder, sizeBytes);
+                // FIXME: interp.c uses memcpy
+                append_memmove_dest_src(builder, sizeBytes, true);
                 break;
             }
             case MintOpcode.MINT_LDOBJ_VT: {
                 const size = getArgU16(ip, 3);
                 append_ldloca(builder, getArgU16(ip, 1), size);
                 append_ldloc_cknull(builder, getArgU16(ip, 2), ip, true);
-                append_memmove_dest_src(builder, size);
+                // FIXME: interp.c uses memcpy
+                append_memmove_dest_src(builder, size, true);
                 break;
             }
             case MintOpcode.MINT_STOBJ_VT: {
@@ -585,7 +590,8 @@ export function generateWasmBody(
                 const sizeBytes = getArgU16(ip, 3);
                 append_ldloc(builder, getArgU16(ip, 1), WasmOpcode.i32_load);
                 append_ldloca(builder, getArgU16(ip, 2), 0);
-                append_memmove_dest_src(builder, sizeBytes);
+                // FIXME: interp.c uses memcpy
+                append_memmove_dest_src(builder, sizeBytes, true);
                 break;
             }
 
@@ -2139,7 +2145,7 @@ function emit_fieldop(
                 builder.i32_const(fieldOffset);
                 builder.appendU8(WasmOpcode.i32_add);
             }
-            append_memmove_dest_src(builder, sizeBytes);
+            append_memmove_dest_src(builder, sizeBytes, true);
             return true;
         }
         case MintOpcode.MINT_STFLD_VT: {
@@ -2166,7 +2172,7 @@ function emit_fieldop(
             }
             // src
             append_ldloca(builder, localOffset, 0);
-            append_memmove_dest_src(builder, sizeBytes);
+            append_memmove_dest_src(builder, sizeBytes, true);
             return true;
         }
 
@@ -2281,7 +2287,7 @@ function emit_sfieldop(
             append_ldloca(builder, localOffset, sizeBytes);
             // src
             builder.ptr_const(pStaticData);
-            append_memmove_dest_src(builder, sizeBytes);
+            append_memmove_dest_src(builder, sizeBytes, true);
             return true;
         }
 
@@ -3245,7 +3251,7 @@ function emit_arrayop(builder: WasmBuilder, frame: NativePointer, ip: MintOpcode
             // src
             append_getelema1(builder, ip, objectOffset, indexOffset, elementSize);
             // memcpy (locals + ip [1], src_addr, size);
-            append_memmove_dest_src(builder, elementSize);
+            append_memmove_dest_src(builder, elementSize, true);
             invalidate_local_range(getArgU16(ip, 1), elementSize);
             return true;
         }
@@ -3353,7 +3359,7 @@ function emit_simd(
                 append_ldloca(builder, getArgU16(ip, 1), sizeOfV128);
                 // src (ip + 2)
                 builder.ptr_const(<any>ip + 4);
-                append_memmove_dest_src(builder, sizeOfV128);
+                append_memmove_dest_src(builder, sizeOfV128, true);
             }
             return true;
         }

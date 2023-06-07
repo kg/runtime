@@ -1602,7 +1602,8 @@ export function append_memset_dest(builder: WasmBuilder, value: number, count: n
 
 export function try_append_memmove_fast(
     builder: WasmBuilder, destLocalOffset: number, srcLocalOffset: number,
-    count: number, addressesOnStack: boolean, destLocal?: string, srcLocal?: string
+    count: number, addressesOnStack: boolean, destLocal?: string, srcLocal?: string,
+    nonOverlapping?: boolean
 ) {
     if (count <= 0) {
         if (addressesOnStack) {
@@ -1615,9 +1616,19 @@ export function try_append_memmove_fast(
     if (count >= maxMemmoveSize)
         return false;
 
+    const sizeofV128 = 16,
+        sizeofI64 = 8,
+        overlappingSizeLimit = builder.options.enableSimd ? sizeofV128 : sizeofI64;
+
     if (addressesOnStack) {
         destLocal = destLocal || "math_lhs32";
         srcLocal = srcLocal || "math_rhs32";
+        // The addresses are unknown and the copy is big enough that we need to rely
+        //  on the wasm runtime's more expensive memmove implementation to handle overlap
+        if ((nonOverlapping !== true) && (count > overlappingSizeLimit)) {
+            // mono_log_info(`potentially overlapping memmove of size ${count} from ${srcLocal}[${srcLocalOffset}] to ${destLocal}[${destLocalOffset}] deopt`);
+            return false;
+        }
         builder.local(srcLocal, WasmOpcode.set_local);
         builder.local(destLocal, WasmOpcode.set_local);
     } else if (!destLocal || !srcLocal) {
@@ -1626,11 +1637,34 @@ export function try_append_memmove_fast(
         // the addresses were already stored in the local args
     }
 
+    // Detect overlapping copies and don't unroll them
+    if ((destLocal === srcLocal) && (srcLocal === "pLocals")) {
+        // In rare cases we end up with a move-to-self which "overlaps", we can just skip
+        //  performing the operation entirely
+        if (srcLocalOffset === destLocalOffset)
+            return true;
+
+        // This is a local-to-local copy of a known size, determine whether it overlaps
+        const noOverlap = (srcLocalOffset + count <= destLocalOffset) ||
+                (destLocalOffset + count <= srcLocalOffset);
+
+        if (!noOverlap) {
+            // mono_log_info(`overlapping memmove of size ${count} from ${srcLocal}[${srcLocalOffset}] to ${destLocal}[${destLocalOffset}] deopt`);
+            // mono_assert(nonOverlapping !== true, "nonOverlapping was specified but this memmove overlaps!");
+            return false;
+        }
+    } else {
+        // We don't know if this overlaps either
+        if ((nonOverlapping !== true) && (count > overlappingSizeLimit)) {
+            // mono_log_info(`potentially overlapping memmove of size ${count} from ${srcLocal}[${srcLocalOffset}] to ${destLocal}[${destLocalOffset}] deopt`);
+            return false;
+        }
+    }
+
     let destOffset = addressesOnStack ? 0 : destLocalOffset,
         srcOffset = addressesOnStack ? 0 : srcLocalOffset;
 
     if (builder.options.enableSimd) {
-        const sizeofV128 = 16;
         while (count >= sizeofV128) {
             builder.local(destLocal);
             builder.local(srcLocal);
@@ -1645,16 +1679,16 @@ export function try_append_memmove_fast(
     }
 
     // Do blocks of 8-byte copies first for smaller/faster code
-    while (count >= 8) {
+    while (count >= sizeofI64) {
         builder.local(destLocal);
         builder.local(srcLocal);
         builder.appendU8(WasmOpcode.i64_load);
         builder.appendMemarg(srcOffset, 0);
         builder.appendU8(WasmOpcode.i64_store);
         builder.appendMemarg(destOffset, 0);
-        destOffset += 8;
-        srcOffset += 8;
-        count -= 8;
+        destOffset += sizeofI64;
+        srcOffset += sizeofI64;
+        count -= sizeofI64;
     }
 
     // Then copy the remaining 0-7 bytes
@@ -1681,7 +1715,6 @@ export function try_append_memmove_fast(
                 loadOp = WasmOpcode.i32_load16_s;
                 storeOp = WasmOpcode.i32_store16;
                 break;
-
         }
 
         builder.local(destLocal);
@@ -1699,8 +1732,8 @@ export function try_append_memmove_fast(
 }
 
 // expects dest then source to have been pushed onto wasm stack
-export function append_memmove_dest_src(builder: WasmBuilder, count: number) {
-    if (try_append_memmove_fast(builder, 0, 0, count, true))
+export function append_memmove_dest_src(builder: WasmBuilder, count: number, nonOverlapping?: boolean) {
+    if (try_append_memmove_fast(builder, 0, 0, count, true, undefined, undefined, nonOverlapping))
         return true;
 
     // spec: pop n, pop s, pop d, copy n bytes from s to d
