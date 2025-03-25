@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #include "interpexec.h"
+#include "threads.h"
+#include "gcenv.h"
 #include <math.h>
 
 #ifdef FEATURE_INTERPRETER
@@ -735,6 +737,13 @@ MAIN_LOOP:
                 stack = pFrame->pStack;
                 ip = pFrame->startIp + sizeof(InterpMethod*) / sizeof(int32_t);
                 pThreadContext->pStackPointer = stack + pMethod->allocaSize;
+                break;
+            }
+            case INTOP_COLLECT: {
+                // HACK: blocking gc of all generations
+                // FIXME: currently hangs and stack walk does not ever reach the interpreter code manager
+                GCX_COOP();
+                GCHeapUtilities::GetGCHeap()->GarbageCollect(-1, false, 0x00000002);
                 break;
             }
             case INTOP_FAILFAST:
