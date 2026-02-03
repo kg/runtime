@@ -2032,11 +2032,11 @@ uint32_t interceptor_ICJI::getExpectedTargetArchitecture()
     return result;
 }
 
-CORINFO_WASM_TYPE_SYMBOL_HANDLE interceptor_ICJI::getWasmTypeSymbol(CorInfoType* types)
+CORINFO_WASM_TYPE_SYMBOL_HANDLE interceptor_ICJI::getWasmTypeSymbol(CorInfoType* types, size_t typesSize)
 {
     mc->cr->AddCall("getWasmTypeSymbol");
-    CORINFO_WASM_TYPE_SYMBOL_HANDLE temp = original_ICorJitInfo->getWasmTypeSymbol(types);
-    mc->recGetWasmTypeSymbol(types, temp);
+    CORINFO_WASM_TYPE_SYMBOL_HANDLE temp = original_ICorJitInfo->getWasmTypeSymbol(types, typeSize);
+    mc->recGetWasmTypeSymbol(types, typeSize, temp);
     return temp;
 }
 

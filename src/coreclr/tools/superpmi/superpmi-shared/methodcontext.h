@@ -907,9 +907,9 @@ public:
     void dmpGetSpecialCopyHelper(DWORDLONG key, DWORDLONG value);
     CORINFO_METHOD_HANDLE repGetSpecialCopyHelper(CORINFO_CLASS_HANDLE type);
 
-    void recGetWasmTypeSymbol(CorInfoType* types, CORINFO_WASM_TYPE_SYMBOL_HANDLE result);
+    void recGetWasmTypeSymbol(CorInfoType* types, size_t typesSize, CORINFO_WASM_TYPE_SYMBOL_HANDLE result);
     void dmpGetWasmTypeSymbol(DWORDLONG key, DWORDLONG value);
-    CORINFO_WASM_TYPE_SYMBOL_HANDLE repGetWasmTypeSymbol(CorInfoType* types);
+    CORINFO_WASM_TYPE_SYMBOL_HANDLE repGetWasmTypeSymbol(CorInfoType* types, size_t typesSize);
 
     void dmpSigInstHandleMap(DWORD key, DWORDLONG value);
 

@@ -60,6 +60,10 @@ namespace Internal.JitInterface
     {
     }
 
+    public struct CORINFO_WASM_TYPE_SYMBOL_STRUCT_
+    {
+    }
+
     public struct CORINFO_JUST_MY_CODE_HANDLE_
     {
     }

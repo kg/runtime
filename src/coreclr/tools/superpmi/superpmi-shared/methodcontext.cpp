@@ -7336,7 +7336,7 @@ CORINFO_METHOD_HANDLE MethodContext::repGetSpecialCopyHelper(CORINFO_CLASS_HANDL
     return (CORINFO_METHOD_HANDLE)value;
 }
 
-void MethodContext::recGetWasmTypeSymbol(CorInfoType* types, CORINFO_WASM_TYPE_SYMBOL_HANDLE result)
+void MethodContext::recGetWasmTypeSymbol(CorInfoType* types, size_t typesSize, CORINFO_WASM_TYPE_SYMBOL_HANDLE result)
 {
     if (GetWasmTypeSymbol == nullptr)
         GetWasmTypeSymbol = new LightWeightMap<DWORDLONG, DWORDLONG>();
@@ -7355,7 +7355,7 @@ void MethodContext::dmpGetWasmTypeSymbol(DWORDLONG key, DWORDLONG value)
     printf("getWasmTypeSymbol key %016" PRIX64 ", value %016" PRIX64 "", key, value);
 }
 
-CORINFO_WASM_TYPE_SYMBOL_HANDLE MethodContext::repGetWasmTypeSymbol(CorInfoType* types)
+CORINFO_WASM_TYPE_SYMBOL_HANDLE MethodContext::repGetWasmTypeSymbol(CorInfoType* types, size_t typesSize)
 {
     DWORDLONG key = CastPointer(types);
     DWORDLONG value = LookupByKeyOrMiss(GetWasmTypeSymbol, key, ": key %016" PRIX64 "", key);

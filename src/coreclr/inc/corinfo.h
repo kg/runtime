@@ -3462,7 +3462,8 @@ public:
     virtual void updateEntryPointForTailCall(CORINFO_CONST_LOOKUP* entryPoint) = 0;
 
     virtual CORINFO_WASM_TYPE_SYMBOL_HANDLE getWasmTypeSymbol(
-        CorInfoType*              types
+        CorInfoType*              types,
+        size_t                    typesSize
         ) = 0;
 
     virtual CORINFO_METHOD_HANDLE getSpecialCopyHelper(CORINFO_CLASS_HANDLE type) = 0;
